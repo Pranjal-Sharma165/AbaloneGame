@@ -38,39 +38,39 @@ black_marble = "Black"
 no_marble = "Blank"
 
 standard_board_init = {
-    "I": {"i5": white_marble, "i6": white_marble, "i7": white_marble, "i8": white_marble, "i9": white_marble},
-    "H": {"h4": white_marble, "h5": white_marble, "h6": white_marble, "h7": white_marble, "h8": white_marble, "h9": white_marble},
-    "G": {"g3": no_marble, "g4": no_marble, "g5": white_marble, "g6": white_marble, "g7": white_marble, "g8": no_marble, "g9": no_marble},
-    "F": {"f2": no_marble, "f3": no_marble, "f4": no_marble, "f5": no_marble, "f6": no_marble, "f7": no_marble, "f8": no_marble, "f9": no_marble},
-    "E": {"e1": no_marble, "e2": no_marble, "e3": no_marble, "e4": no_marble, "e5": no_marble, "e6": no_marble, "e7": no_marble, "e8": no_marble, "e9": no_marble},
-    "D": {"d1": no_marble, "d2": no_marble, "d3": no_marble, "d4": no_marble, "d5": no_marble, "d6": no_marble, "d7": no_marble, "d8": no_marble},
-    "C": {"c1": no_marble, "c2": no_marble, "c3": black_marble, "c4": black_marble, "c5": black_marble, "c6": no_marble, "c7": no_marble},
-    "B": {"b1": black_marble, "b2": black_marble, "b3": black_marble, "b4": black_marble, "b5": black_marble, "b6": black_marble},
-    "A": {"a1": black_marble, "a2": black_marble, "a3": black_marble, "a4": black_marble, "a5": black_marble}
+    "I5": white_marble, "I6": white_marble, "I7": white_marble, "I8": white_marble, "I9": white_marble,
+    "H4": white_marble, "H5": white_marble, "H6": white_marble, "H7": white_marble, "H8": white_marble, "H9": white_marble,
+    "G3": no_marble, "G4": no_marble, "G5": white_marble, "G6": white_marble, "G7": white_marble, "G8": no_marble, "G9": no_marble,
+    "F2": no_marble, "F3": no_marble, "F4": no_marble, "F5": no_marble, "F6": no_marble, "F7": no_marble, "F8": no_marble, "F9": no_marble,
+    "E1": no_marble, "E2": no_marble, "E3": no_marble, "E4": no_marble, "E5": no_marble, "E6": no_marble, "E7": no_marble, "E8": no_marble, "E9": no_marble,
+    "D1": no_marble, "D2": no_marble, "D3": no_marble, "D4": no_marble, "D5": no_marble, "D6": no_marble, "D7": no_marble, "D8": no_marble,
+    "C1": no_marble, "C2": no_marble, "C3": black_marble, "C4": black_marble, "C5": black_marble, "C6": no_marble, "C7": no_marble,
+    "B1": black_marble, "B2": black_marble, "B3": black_marble, "B4": black_marble, "B5": black_marble, "B6": black_marble,
+    "A1": black_marble, "A2": black_marble, "A3": black_marble, "A4": black_marble, "A5": black_marble
 }
 
 belgian_board_init = {
-    "I": {"i5": white_marble, "i6": white_marble, "i7": no_marble, "i8": black_marble, "i9": black_marble},
-    "H": {"h4": white_marble, "h5": white_marble, "h6": white_marble, "h7": black_marble, "h8": black_marble, "h9": black_marble},
-    "G": {"g3": no_marble, "g4": white_marble, "g5": white_marble, "g6": no_marble, "g7": black_marble, "g8": black_marble, "g9": no_marble},
-    "F": {"f2": no_marble, "f3": no_marble, "f4": no_marble, "f5": no_marble, "f6": no_marble, "f7": no_marble, "f8": no_marble, "f9": no_marble},
-    "E": {"e1": no_marble, "e2": no_marble, "e3": no_marble, "e4": no_marble, "e5": no_marble, "e6": no_marble, "e7": no_marble, "e8": no_marble, "e9": no_marble},
-    "D": {"d1": no_marble, "d2": no_marble, "d3": no_marble, "d4": no_marble, "d5": no_marble, "d6": no_marble, "d7": no_marble, "d8": no_marble},
-    "C": {"c1": no_marble, "c2": black_marble, "c3": black_marble, "c4": no_marble, "c5": white_marble, "c6": white_marble, "c7": no_marble},
-    "B": {"b1": black_marble, "b2": black_marble, "b3": black_marble, "b4": white_marble, "b5": white_marble, "b6": white_marble},
-    "A": {"a1": black_marble, "a2": black_marble, "a3": no_marble, "a4": white_marble, "a5": white_marble}
+    "I5": white_marble, "I6": white_marble, "I7": no_marble, "I8": black_marble, "I9": black_marble,
+    "H4": white_marble, "H5": white_marble, "H6": white_marble, "H7": black_marble, "H8": black_marble, "H9": black_marble,
+    "G3": no_marble, "G4": white_marble, "G5": white_marble, "G6": no_marble, "G7": black_marble, "G8": black_marble, "G9": no_marble,
+    "F2": no_marble, "F3": no_marble, "F4": no_marble, "F5": no_marble, "F6": no_marble, "F7": no_marble, "F8": no_marble, "F9": no_marble,
+    "E1": no_marble, "E2": no_marble, "E3": no_marble, "E4": no_marble, "E5": no_marble, "E6": no_marble, "E7": no_marble, "E8": no_marble, "E9": no_marble,
+    "D1": no_marble, "D2": no_marble, "D3": no_marble, "D4": no_marble, "D5": no_marble, "D6": no_marble, "D7": no_marble, "D8": no_marble,
+    "C1": no_marble, "C2": black_marble, "C3": black_marble, "C4": no_marble, "C5": white_marble, "C6": white_marble, "C7": no_marble,
+    "B1": black_marble, "B2": black_marble, "B3": black_marble, "B4": white_marble, "B5": white_marble, "B6": white_marble,
+    "A1": black_marble, "A2": black_marble, "A3": no_marble, "A4": white_marble, "A5": white_marble
 }
 
 german_board_init = {
-    "I": {"i5": no_marble, "i6": no_marble, "i7": no_marble, "i8": no_marble, "i9": no_marble},
-    "H": {"h4": white_marble, "h5": white_marble, "h6": no_marble, "h7": no_marble, "h8": black_marble, "h9": black_marble},
-    "G": {"g3": white_marble, "g4": white_marble, "g5": white_marble, "g6": no_marble, "g7": black_marble, "g8": black_marble, "g9": black_marble},
-    "F": {"f2": no_marble, "f3": white_marble, "f4": white_marble, "f5": no_marble, "f6": no_marble, "f7": black_marble, "f8": black_marble, "f9": no_marble},
-    "E": {"e1": no_marble, "e2": no_marble, "e3": no_marble, "e4": no_marble, "e5": no_marble, "e6": no_marble, "e7": no_marble, "e8": no_marble, "e9": no_marble},
-    "D": {"d1": no_marble, "d2": black_marble, "d3": black_marble, "d4": no_marble, "d5": no_marble, "d6": white_marble, "d7": white_marble, "d8": no_marble},
-    "C": {"c1": black_marble, "c2": black_marble, "c3": black_marble, "c4": no_marble, "c5": white_marble, "c6": white_marble, "c7": white_marble},
-    "B": {"b1": black_marble, "b2": black_marble, "b3": no_marble, "b4": no_marble, "b5": white_marble, "b6": white_marble},
-    "A": {"a1": no_marble, "a2": no_marble, "a3": no_marble, "a4": no_marble, "a5": no_marble}
+    "I5": no_marble, "I6": no_marble, "I7": no_marble, "I8": no_marble, "I9": no_marble,
+    "H4": white_marble, "H5": white_marble, "H6": no_marble, "H7": no_marble, "H8": black_marble, "H9": black_marble,
+    "G3": white_marble, "G4": white_marble, "G5": white_marble, "G6": no_marble, "G7": black_marble, "G8": black_marble, "G9": black_marble,
+    "F2": no_marble, "F3": white_marble, "F4": white_marble, "F5": no_marble, "F6": no_marble, "F7": black_marble, "F8": black_marble, "F9": no_marble,
+    "E1": no_marble, "E2": no_marble, "E3": no_marble, "E4": no_marble, "E5": no_marble, "E6": no_marble, "E7": no_marble, "E8": no_marble, "E9": no_marble,
+    "D1": no_marble, "D2": black_marble, "D3": black_marble, "D4": no_marble, "D5": no_marble, "D6": white_marble, "D7": white_marble, "D8": no_marble,
+    "C1": black_marble, "C2": black_marble, "C3": black_marble, "C4": no_marble, "C5": white_marble, "C6": white_marble, "C7": white_marble,
+    "B1": black_marble, "B2": black_marble, "B3": no_marble, "B4": no_marble, "B5": white_marble, "B6": white_marble,
+    "A1": no_marble, "A2": no_marble, "A3": no_marble, "A4": no_marble, "A5": no_marble
 }
 
 current_board = german_board_init
@@ -102,29 +102,36 @@ def draw_board(board):
     canvas.delete("all")
     canvas.config(bg=THEME["bg"])
 
+    rows = {}
+    for key in board.keys():
+        row_letter = key[0].upper()
+        rows.setdefault(row_letter, []).append(key)
+    sorted_rows = sorted(rows.keys(), reverse=True)
+
     center_x, center_y = BOARD_SIZE // 2, BOARD_SIZE // 2
     hex_width = HEX_SIZE * 1.9
 
-    for row_label, cells in board.items():
-        row_index = ord("I") - ord(row_label)
-        num_cells = len(cells)
-
+    for row_letter in sorted_rows:
+        cell_keys = sorted(rows[row_letter], key=lambda k: int(k[1:]))
+        num_cells = len(cell_keys)
+        row_index = ord("I") - ord(row_letter)
         row_width = num_cells * hex_width
         start_x = center_x - row_width / 2 + hex_width / 2
         start_y = center_y + (row_index - 4) * HEX_SIZE * math.sqrt(3)
 
-        for i, cell in enumerate(cells.items()):
+        for i, cell_key in enumerate(cell_keys):
             x = start_x + i * hex_width
             y = start_y
             draw_hexagon(x, y, HEX_SIZE, THEME["hex_bg"], THEME["hex_outline"])
-            if cell[1] == black_marble:
+            cell_value = board[cell_key]
+            if cell_value == black_marble:
                 draw_marble(x, y, HEX_SIZE, THEME["hex_outline"], "#000000")
-                canvas.create_text(x, y, text=cell[0], fill="#FFFFFF", font=("Arial", 10, "bold"))
-            elif cell[1] == white_marble:
+                canvas.create_text(x, y, text=cell_key, fill="#FFFFFF", font=("Arial", 10, "bold"))
+            elif cell_value == white_marble:
                 draw_marble(x, y, HEX_SIZE, THEME["hex_bg"], "#000000")
-                canvas.create_text(x, y, text=cell[0], fill=THEME["text"], font=("Arial", 10, "bold"))
+                canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
             else:
-                canvas.create_text(x, y, text=cell[0], fill=THEME["text"], font=("Arial", 10, "bold"))
+                canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
 
 
 def update_turn_display():
