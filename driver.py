@@ -24,7 +24,7 @@ THEMES = {
 
 root = tk.Tk()
 root.title("Abalone Game")
-root.geometry("800x700")
+root.geometry("1000x800")
 
 current_player = "Black"
 move_count = 0
@@ -73,7 +73,7 @@ german_board_init = {
     "A1": no_marble, "A2": no_marble, "A3": no_marble, "A4": no_marble, "A5": no_marble
 }
 
-current_board = german_board_init
+current_board = standard_board_init
 
 def draw_hexagon(x, y, size, fill_color, outline_color):
     angle = 60
@@ -97,20 +97,16 @@ def draw_marble(x, y, size, fill_color, outline_color):
     coords.append(y_1)
     canvas.create_oval(coords, fill=fill_color, outline=outline_color)
 
-
 def draw_board(board):
     canvas.delete("all")
     canvas.config(bg=THEME["bg"])
-
     rows = {}
     for key in board.keys():
         row_letter = key[0].upper()
         rows.setdefault(row_letter, []).append(key)
     sorted_rows = sorted(rows.keys(), reverse=True)
-
     center_x, center_y = BOARD_SIZE // 2, BOARD_SIZE // 2
     hex_width = HEX_SIZE * 1.9
-
     for row_letter in sorted_rows:
         cell_keys = sorted(rows[row_letter], key=lambda k: int(k[1:]))
         num_cells = len(cell_keys)
@@ -118,7 +114,6 @@ def draw_board(board):
         row_width = num_cells * hex_width
         start_x = center_x - row_width / 2 + hex_width / 2
         start_y = center_y + (row_index - 4) * HEX_SIZE * math.sqrt(3)
-
         for i, cell_key in enumerate(cell_keys):
             x = start_x + i * hex_width
             y = start_y
@@ -132,7 +127,6 @@ def draw_board(board):
                 canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
             else:
                 canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
-
 
 def update_turn_display():
     if current_player == "Black":
@@ -167,10 +161,8 @@ def switch_theme(selected_theme=None):
         next_index = (current_index + 1) % len(theme_list)
         theme_mode = theme_list[next_index]
         THEME = THEMES[theme_mode]
-
     draw_board(current_board)
     update_turn_display()
-
     pause_button.config(
         bg="#FF6347" if is_paused else THEME.get("btn_bg", "#D3D3D3"),
         fg="white" if is_paused else THEME.get("btn_fg", "#000000"),
@@ -198,7 +190,6 @@ def reset_game():
 def toggle_pause():
     global is_paused, pause_time, start_time
     if is_paused:
-        # Resume the game
         is_paused = False
         pause_button.config(
             text="Pause Game",
@@ -251,6 +242,7 @@ def start_game():
     bottom_frame.pack(fill="x", pady=5)
     draw_board(current_board)
     start_timer()
+    command_frame.pack(side="bottom", fill="x", pady=10)
 
 def exit_game():
     if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
@@ -287,9 +279,7 @@ theme_label.pack(side="left", padx=10)
 theme_options = list(THEMES.keys())
 
 theme_button.config(command=change_theme)
-
 theme_button.pack_forget()
-
 theme_dropdown = tk.OptionMenu(top_frame, tk.StringVar(value=theme_mode), *theme_options, command=switch_theme)
 theme_dropdown.pack(side="left", padx=10)
 
@@ -308,10 +298,10 @@ turn_label = tk.Label(
     font=("Arial", 14),
     bg=THEME["bg"],
     fg=THEME["text"],
-    relief="solid",  # Add a solid border
-    bd=2,  # Border width
-    padx=10,  # Horizontal padding
-    pady=5  # Vertical padding
+    relief="solid",
+    bd=2,
+    padx=10,
+    pady=5
 )
 turn_label.pack(side="left", padx=10)
 move_counter_label = tk.Label(bottom_frame, text=f"Moves: {move_count}", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
@@ -320,5 +310,98 @@ turn_label.pack(side="left", padx=10)
 move_counter_label.pack(side="left", padx=10)
 
 canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
+
+class SomeError(Exception):
+    pass
+
+def next_row(row):
+    return chr(ord(row) + 1)
+
+def prev_row(row):
+    return chr(ord(row) - 1)
+
+def transform_coordinate(coord, direction):
+    row = coord[0]
+    col = int(coord[1:])
+    if direction == "upper_left":
+        new_row = next_row(row)
+        new_col = col
+    elif direction == "upper_right":
+        new_row = next_row(row)
+        new_col = col + 1
+    elif direction == "left":
+        new_row = row
+        new_col = col - 1
+    elif direction == "right":
+        new_row = row
+        new_col = col + 1
+    elif direction == "down_left":
+        new_row = prev_row(row)
+        new_col = col - 1
+    elif direction == "down_right":
+        new_row = prev_row(row)
+        new_col = col
+    else:
+        raise SomeError("To be implemented soon")
+    return f"{new_row}{new_col}"
+
+def move_marbles_cmd(marble_coords, direction):
+    global current_board
+    player = current_board[marble_coords[0]]
+    new_coords = [transform_coordinate(coord, direction) for coord in marble_coords]
+    for coord in marble_coords:
+        current_board[coord] = no_marble
+    for new_coord in new_coords:
+        current_board[new_coord] = player
+    return True
+
+def parse_move_input(move_str):
+    move_str = move_str.replace(" ", "")
+    parts = move_str.split("],[")
+    if len(parts) != 2:
+        return None, None
+    part1 = parts[0].lstrip("[")
+    part2 = parts[1].rstrip("]")
+    source_list = part1.split(",")
+    dest_list = part2.split(",")
+    return source_list, dest_list
+
+def get_move_direction(source, dest):
+    s_row, s_col = source[0], int(source[1:])
+    d_row, d_col = dest[0], int(dest[1:])
+    if next_row(s_row) == d_row and s_col == d_col:
+        return "upper_left"
+    elif next_row(s_row) == d_row and s_col + 1 == d_col:
+        return "upper_right"
+    elif s_row == d_row and s_col - 1 == d_col:
+        return "left"
+    elif s_row == d_row and s_col + 1 == d_col:
+        return "right"
+    elif prev_row(s_row) == d_row and s_col - 1 == d_col:
+        return "down_left"
+    elif prev_row(s_row) == d_row and s_col == d_col:
+        return "down_right"
+    else:
+        raise SomeError("to be implemented soon")
+
+def process_move_command():
+    move_text = move_entry.get()
+    source_list, dest_list = parse_move_input(move_text)
+    direction = get_move_direction(source_list[0], dest_list[0])
+    if move_marbles_cmd(source_list, direction):
+        draw_board(current_board)
+    else:
+        raise SomeError("to be implemented soon")
+    move_entry.delete(0, tk.END)
+
+command_frame = tk.Frame(root, bg=THEME["bg"])
+move_label = tk.Label(command_frame, text="Enter your move:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
+move_label.pack(pady=5)
+entry_frame = tk.Frame(command_frame, bg=THEME["bg"])
+entry_frame.pack(pady=3)
+move_entry = tk.Entry(entry_frame, width=50, font=("Arial", 12))
+move_entry.pack(side="left", padx=5)
+move_button = tk.Button(entry_frame, text="Move", command=process_move_command, font=("Arial", 12), bg=THEME["btn_bg"], fg=THEME["btn_fg"])
+move_button.pack(side="left", padx=5)
 
 root.mainloop()
