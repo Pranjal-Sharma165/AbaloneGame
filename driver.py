@@ -33,18 +33,47 @@ is_paused = False
 player_times = {"Black": [], "White": []}
 start_time = None
 pause_time = None
+white_marble = "White"
+black_marble = "Black"
+no_marble = "Blank"
 
-hex_coords = {
-    "I": ["i5", "i6", "i7", "i8", "i9"],
-    "H": ["h4", "h5", "h6", "h7", "h8", "h9"],
-    "G": ["g3", "g4", "g5", "g6", "g7", "g8", "g9"],
-    "F": ["f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9"],
-    "E": ["e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"],
-    "D": ["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8"],
-    "C": ["c1", "c2", "c3", "c4", "c5", "c6", "c7"],
-    "B": ["b1", "b2", "b3", "b4", "b5", "b6"],
-    "A": ["a1", "a2", "a3", "a4", "a5"]
+standard_board_init = {
+    "I": {"i5": white_marble, "i6": white_marble, "i7": white_marble, "i8": white_marble, "i9": white_marble},
+    "H": {"h4": white_marble, "h5": white_marble, "h6": white_marble, "h7": white_marble, "h8": white_marble, "h9": white_marble},
+    "G": {"g3": no_marble, "g4": no_marble, "g5": white_marble, "g6": white_marble, "g7": white_marble, "g8": no_marble, "g9": no_marble},
+    "F": {"f2": no_marble, "f3": no_marble, "f4": no_marble, "f5": no_marble, "f6": no_marble, "f7": no_marble, "f8": no_marble, "f9": no_marble},
+    "E": {"e1": no_marble, "e2": no_marble, "e3": no_marble, "e4": no_marble, "e5": no_marble, "e6": no_marble, "e7": no_marble, "e8": no_marble, "e9": no_marble},
+    "D": {"d1": no_marble, "d2": no_marble, "d3": no_marble, "d4": no_marble, "d5": no_marble, "d6": no_marble, "d7": no_marble, "d8": no_marble},
+    "C": {"c1": no_marble, "c2": no_marble, "c3": black_marble, "c4": black_marble, "c5": black_marble, "c6": no_marble, "c7": no_marble},
+    "B": {"b1": black_marble, "b2": black_marble, "b3": black_marble, "b4": black_marble, "b5": black_marble, "b6": black_marble},
+    "A": {"a1": black_marble, "a2": black_marble, "a3": black_marble, "a4": black_marble, "a5": black_marble}
 }
+
+belgian_board_init = {
+    "I": {"i5": white_marble, "i6": white_marble, "i7": no_marble, "i8": black_marble, "i9": black_marble},
+    "H": {"h4": white_marble, "h5": white_marble, "h6": white_marble, "h7": black_marble, "h8": black_marble, "h9": black_marble},
+    "G": {"g3": no_marble, "g4": white_marble, "g5": white_marble, "g6": no_marble, "g7": black_marble, "g8": black_marble, "g9": no_marble},
+    "F": {"f2": no_marble, "f3": no_marble, "f4": no_marble, "f5": no_marble, "f6": no_marble, "f7": no_marble, "f8": no_marble, "f9": no_marble},
+    "E": {"e1": no_marble, "e2": no_marble, "e3": no_marble, "e4": no_marble, "e5": no_marble, "e6": no_marble, "e7": no_marble, "e8": no_marble, "e9": no_marble},
+    "D": {"d1": no_marble, "d2": no_marble, "d3": no_marble, "d4": no_marble, "d5": no_marble, "d6": no_marble, "d7": no_marble, "d8": no_marble},
+    "C": {"c1": no_marble, "c2": black_marble, "c3": black_marble, "c4": no_marble, "c5": white_marble, "c6": white_marble, "c7": no_marble},
+    "B": {"b1": black_marble, "b2": black_marble, "b3": black_marble, "b4": white_marble, "b5": white_marble, "b6": white_marble},
+    "A": {"a1": black_marble, "a2": black_marble, "a3": no_marble, "a4": white_marble, "a5": white_marble}
+}
+
+german_board_init = {
+    "I": {"i5": no_marble, "i6": no_marble, "i7": no_marble, "i8": no_marble, "i9": no_marble},
+    "H": {"h4": white_marble, "h5": white_marble, "h6": no_marble, "h7": no_marble, "h8": black_marble, "h9": black_marble},
+    "G": {"g3": white_marble, "g4": white_marble, "g5": white_marble, "g6": no_marble, "g7": black_marble, "g8": black_marble, "g9": black_marble},
+    "F": {"f2": no_marble, "f3": white_marble, "f4": white_marble, "f5": no_marble, "f6": no_marble, "f7": black_marble, "f8": black_marble, "f9": no_marble},
+    "E": {"e1": no_marble, "e2": no_marble, "e3": no_marble, "e4": no_marble, "e5": no_marble, "e6": no_marble, "e7": no_marble, "e8": no_marble, "e9": no_marble},
+    "D": {"d1": no_marble, "d2": black_marble, "d3": black_marble, "d4": no_marble, "d5": no_marble, "d6": white_marble, "d7": white_marble, "d8": no_marble},
+    "C": {"c1": black_marble, "c2": black_marble, "c3": black_marble, "c4": no_marble, "c5": white_marble, "c6": white_marble, "c7": white_marble},
+    "B": {"b1": black_marble, "b2": black_marble, "b3": no_marble, "b4": no_marble, "b5": white_marble, "b6": white_marble},
+    "A": {"a1": no_marble, "a2": no_marble, "a3": no_marble, "a4": no_marble, "a5": no_marble}
+}
+
+current_board = german_board_init
 
 def draw_hexagon(x, y, size, fill_color, outline_color):
     angle = 60
@@ -55,14 +84,28 @@ def draw_hexagon(x, y, size, fill_color, outline_color):
         coords.append((x_i, y_i))
     canvas.create_polygon(coords, fill=fill_color, outline=outline_color)
 
-def draw_board():
+def draw_marble(x, y, size, fill_color, outline_color):
+    coords = []
+    angle = 60
+    x_zero = x - size * 0.9
+    y_zero = y + size * math.sin(math.radians(angle))
+    x_1 = x + size * 0.9
+    y_1 = y - size * math.sin(math.radians(angle))
+    coords.append(x_zero)
+    coords.append(y_zero)
+    coords.append(x_1)
+    coords.append(y_1)
+    canvas.create_oval(coords, fill=fill_color, outline=outline_color)
+
+
+def draw_board(board):
     canvas.delete("all")
     canvas.config(bg=THEME["bg"])
 
     center_x, center_y = BOARD_SIZE // 2, BOARD_SIZE // 2
     hex_width = HEX_SIZE * 1.9
 
-    for row_label, cells in hex_coords.items():
+    for row_label, cells in board.items():
         row_index = ord("I") - ord(row_label)
         num_cells = len(cells)
 
@@ -70,11 +113,19 @@ def draw_board():
         start_x = center_x - row_width / 2 + hex_width / 2
         start_y = center_y + (row_index - 4) * HEX_SIZE * math.sqrt(3)
 
-        for i, cell in enumerate(cells):
+        for i, cell in enumerate(cells.items()):
             x = start_x + i * hex_width
             y = start_y
             draw_hexagon(x, y, HEX_SIZE, THEME["hex_bg"], THEME["hex_outline"])
-            canvas.create_text(x, y, text=cell, fill=THEME["text"], font=("Arial", 10, "bold"))
+            if cell[1] == black_marble:
+                draw_marble(x, y, HEX_SIZE, THEME["hex_outline"], "#000000")
+                canvas.create_text(x, y, text=cell[0], fill="#FFFFFF", font=("Arial", 10, "bold"))
+            elif cell[1] == white_marble:
+                draw_marble(x, y, HEX_SIZE, THEME["hex_bg"], "#000000")
+                canvas.create_text(x, y, text=cell[0], fill=THEME["text"], font=("Arial", 10, "bold"))
+            else:
+                canvas.create_text(x, y, text=cell[0], fill=THEME["text"], font=("Arial", 10, "bold"))
+
 
 def update_turn_display():
     if current_player == "Black":
@@ -110,7 +161,7 @@ def switch_theme(selected_theme=None):
         theme_mode = theme_list[next_index]
         THEME = THEMES[theme_mode]
 
-    draw_board()
+    draw_board(current_board)
     update_turn_display()
 
     pause_button.config(
@@ -134,7 +185,7 @@ def reset_game():
     move_counter_label.config(text=f"Moves: {move_count}")
     timer_label.config(text="Time: 0s")
     update_turn_display()
-    draw_board()
+    draw_board(current_board)
     start_timer()
 
 def toggle_pause():
@@ -191,7 +242,7 @@ def start_game():
     top_frame.pack(fill="x", pady=5)
     canvas.pack()
     bottom_frame.pack(fill="x", pady=5)
-    draw_board()
+    draw_board(current_board)
     start_timer()
 
 def exit_game():
