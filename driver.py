@@ -297,7 +297,7 @@ def start_game():
     score_frame.pack(side="top")
     canvas.pack()
     output_frame.pack(side="right", padx=20, pady=(0, 90))
-    log_frame.pack(side="bottom")
+    log_frame.pack(anchor="e")
     bottom_frame.pack(fill="x", pady=5)
     draw_board(current_board)
     start_timer()
