@@ -237,7 +237,9 @@ def reset_game():
 def stop_game():
     reset_game_state()
     top_frame.pack_forget()
+    score_frame.pack_forget()
     canvas.pack_forget()
+    output_frame.pack_forget()
     bottom_frame.pack_forget()
     command_frame.pack_forget()
     start_frame.pack(pady=100)
@@ -402,9 +404,9 @@ output_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
 
 move_duration_label = tk.Label(output_frame, text="Duration of last turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
 move_duration_label.pack(side="top", padx=10, fill="both")
-prev_move_label = tk.Label(output_frame, text="Previous move: [C3, C4, C5], [D3, D4, D5]", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+prev_move_label = tk.Label(output_frame, text="Previous move: c3c4c5, d3d4d5", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
 prev_move_label.pack(side="top", padx=10, fill="both")
-next_move_label = tk.Label(output_frame, text="Next move: [B3, A3], [C3]", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+next_move_label = tk.Label(output_frame, text="Next move: b3a3, c3b3", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
 next_move_label.pack(side="top", padx=10, fill="both")
 
 
