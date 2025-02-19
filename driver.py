@@ -38,7 +38,7 @@ STANDARD_BOARD_INIT = {
     "C1": NO_MARBLE, "C2": NO_MARBLE, "C3": BLACK_MARBLE, "C4": BLACK_MARBLE, "C5": BLACK_MARBLE, "C6": NO_MARBLE, "C7": NO_MARBLE,
     "B1": BLACK_MARBLE, "B2": BLACK_MARBLE, "B3": BLACK_MARBLE, "B4": BLACK_MARBLE, "B5": BLACK_MARBLE, "B6": BLACK_MARBLE,
     "A1": BLACK_MARBLE, "A2": BLACK_MARBLE, "A3": BLACK_MARBLE, "A4": BLACK_MARBLE, "A5": BLACK_MARBLE
-}
+}  # this represents the board with the classic game starting positions
 
 BELGIAN_BOARD_INIT = {
     "I5": WHITE_MARBLE, "I6": WHITE_MARBLE, "I7": NO_MARBLE, "I8": BLACK_MARBLE, "I9": BLACK_MARBLE,
@@ -50,7 +50,7 @@ BELGIAN_BOARD_INIT = {
     "C1": NO_MARBLE, "C2": BLACK_MARBLE, "C3": BLACK_MARBLE, "C4": NO_MARBLE, "C5": WHITE_MARBLE, "C6": WHITE_MARBLE, "C7": NO_MARBLE,
     "B1": BLACK_MARBLE, "B2": BLACK_MARBLE, "B3": BLACK_MARBLE, "B4": WHITE_MARBLE, "B5": WHITE_MARBLE, "B6": WHITE_MARBLE,
     "A1": BLACK_MARBLE, "A2": BLACK_MARBLE, "A3": NO_MARBLE, "A4": WHITE_MARBLE, "A5": WHITE_MARBLE
-}
+}  # this represents the board with the belgian daisy game starting positions
 
 GERMAN_BOARD_INIT = {
     "I5": NO_MARBLE, "I6": NO_MARBLE, "I7": NO_MARBLE, "I8": NO_MARBLE, "I9": NO_MARBLE,
@@ -62,9 +62,9 @@ GERMAN_BOARD_INIT = {
     "C1": BLACK_MARBLE, "C2": BLACK_MARBLE, "C3": BLACK_MARBLE, "C4": NO_MARBLE, "C5": WHITE_MARBLE, "C6": WHITE_MARBLE, "C7": WHITE_MARBLE,
     "B1": BLACK_MARBLE, "B2": BLACK_MARBLE, "B3": NO_MARBLE, "B4": NO_MARBLE, "B5": WHITE_MARBLE, "B6": WHITE_MARBLE,
     "A1": NO_MARBLE, "A2": NO_MARBLE, "A3": NO_MARBLE, "A4": NO_MARBLE, "A5": NO_MARBLE
-}
+}  #this represents the board with the german daisy game starting positions
 
-used_board = STANDARD_BOARD_INIT
+used_board = STANDARD_BOARD_INIT  # used in specifying the game board to use for the game
 
 root = tk.Tk()
 root.title("Abalone Game")
@@ -90,7 +90,16 @@ def draw_hexagon(x, y, size, fill_color, outline_color):
         coords.append((x_i, y_i))
     canvas.create_polygon(coords, fill=fill_color, outline=outline_color)
 
+
 def draw_marble(x, y, size, fill_color, outline_color):
+    """
+    Draws a circle with a fill and outline to represent a marble.
+    :param x: an int representing the x-coordinate of the center of the circle
+    :param y: an int representing the y-coordinate of the center of the circle
+    :param size: an int representing the diameter of the circle
+    :param fill_color: a string of hexadecimal representing the circle's fill color
+    :param outline_color: a string of hexadecimal representing the circle's outline color
+    """
     coords = []
     angle = 60
     x_zero = x - size * 0.9
@@ -103,9 +112,10 @@ def draw_marble(x, y, size, fill_color, outline_color):
     coords.append(y_1)
     canvas.create_oval(coords, fill=fill_color, outline=outline_color)
 
+
 def draw_board(board:dict) -> None:
     """
-    Draws the game board with marbles
+    Draws the game board based on a given board state as a dictionary.
 
     :param board: a dictionary representing the game board
     """
@@ -162,6 +172,7 @@ def update_turn_display():
             pady=5
         )
 
+
 def switch_theme(selected_theme=None):
     global THEME, theme_mode
     if selected_theme:
@@ -182,8 +193,10 @@ def switch_theme(selected_theme=None):
         activeforeground="white" if is_paused else THEME.get("btn_fg", "#000000")
     )
 
+
 def change_theme():
     switch_theme()
+
 
 def reset_game():
     global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board
@@ -199,6 +212,7 @@ def reset_game():
     current_board = copy.deepcopy(STANDARD_BOARD_INIT)
     draw_board(current_board)
     start_timer()
+
 
 def toggle_pause():
     global is_paused, pause_time, start_time
@@ -225,6 +239,7 @@ def toggle_pause():
         )
         pause_time = time.time()
 
+
 def start_timer():
     global start_time
     if not is_paused:
@@ -233,6 +248,7 @@ def start_timer():
         elapsed_time = time.time() - start_time
         timer_label.config(text=f"Time: {int(elapsed_time)}s")
     root.after(1000, start_timer)
+
 
 def end_turn():
     global current_player, move_count, start_time, is_paused, pause_time
@@ -248,6 +264,7 @@ def end_turn():
     update_turn_display()
     start_timer()
 
+
 def start_game():
     start_frame.pack_forget()
     top_frame.pack(fill="x", pady=5)
@@ -257,9 +274,11 @@ def start_game():
     start_timer()
     command_frame.pack(side="bottom", fill="x", pady=10)
 
+
 def exit_game():
     if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
         root.destroy()
+
 
 start_frame = tk.Frame(root, bg=THEME["bg"])
 start_frame.pack(pady=100)
@@ -327,33 +346,38 @@ canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
 
 class SomeError(Exception):
     """
-    temporary error handling for all
+    temporary error handling for all exceptions to be updated in testing phase
     """
     pass
 
+
 def next_row(row: str) -> str:
     """
-    Returns the next alphabet
+    Returns the next alphabetical letter for the next row of the game board.
 
-    :param row: a string of alphabet
-    :return: the next alphabet
+    :param row: a string of the alphabet row
+    :return: a character for the next alphabetical letter
     """
     return chr(ord(row) + 1)
 
+
 def prev_row(row: str) -> str:
     """
-    Returns the previous alphabet
+    Returns the previous alphabetical letter for the previous row of the game board.
 
-    :param row: a string of alphabet
-    :return: the previous alphabet
+    :param row: a string of alphabet row
+    :return: a character for the previous alphabetical letter
     """
     return chr(ord(row) - 1)
 
+
 def parse_move_input(move_str: str) -> tuple[list, list]:
     """
-    Parses the move command input into source and destination lists
+    Parses the move command input into source and destination lists.
 
-    :param move_str: moving command following the rule
+    Example: Moving E5 and E6 to F6 and F7 respectively is expressed as [E5, E6], [F6, F7]
+
+    :param move_str: a string for the moving command following the required format in the example
     :return: a tuple containing the source list and destination list
     """
     move_str = move_str.replace(" ", "")
@@ -364,14 +388,15 @@ def parse_move_input(move_str: str) -> tuple[list, list]:
     dest_list = part2.split(",")
     return source_list, dest_list
 
+
 def get_move_direction(source: str, dest: str) -> str:
     """
     Determines the move direction based on the source and destination coordinates
 
-    :param source: the starting coordinate
-    :param dest: the destination coordinate
-    :return: a string of destination coordinate
-    :raises Exception: will be updated soon
+    :param source: a string for the starting coordinate (i.e. E5)
+    :param dest: a string for the destination coordinate (i.e. F6)
+    :return: a string specifying the movement direction of the marble
+    :raises Exception: catch-all exception to be updated later
     """
     s_row, s_col = source[0], int(source[1:])
     d_row, d_col = dest[0], int(dest[1:])
@@ -390,6 +415,7 @@ def get_move_direction(source: str, dest: str) -> str:
     else:
         raise SomeError("to be implemented soon")
 
+
 def transform_coordinate(coord: str, direction: str) -> str:
     """
     Transforms a board coordinate in the given direction
@@ -397,7 +423,7 @@ def transform_coordinate(coord: str, direction: str) -> str:
     :param coord: starting coordinate
     :param direction: direction of destination
     :return: new coordinate after moving
-    :raises Exception: will be implemented soon
+    :raises Exception: catch-all exception to be updated later
     """
     row = coord[0]
     col = int(coord[1:])
@@ -426,10 +452,10 @@ def transform_coordinate(coord: str, direction: str) -> str:
 
 def move_marbles_cmd(marble_coords: list, direction: str) -> bool:
     """
-    Moves the marbles on the board to the specified direction
+    Moves the marbles on the board in the specified direction.
 
-    :param marble_coords: list of coordinates of the marble(or marbles)
-    :param direction: The direction to move
+    :param marble_coords: list of strings for the coordinates of the marble(or marbles)
+    :param direction: a string representing the direction to move
     :return: True if the move is successful
     """
     global current_board
@@ -441,12 +467,13 @@ def move_marbles_cmd(marble_coords: list, direction: str) -> bool:
         current_board[new_coord] = player
     return True
 
+
 def process_move_command() -> None:
     """
-    Processes the user's move command from the input field
+    Processes the user's move command from the input field.
 
     Parses the move, determines the direction, moves the marbles,
-    and redraws the board
+    and redraws the board, combining the previous separate functions
     """
     move_text = move_entry.get()
     source_list, dest_list = parse_move_input(move_text)
@@ -456,6 +483,7 @@ def process_move_command() -> None:
     else:
         raise SomeError("to be implemented soon")
     move_entry.delete(0, tk.END)
+
 
 command_frame = tk.Frame(root, bg=THEME["bg"])
 move_label = tk.Label(command_frame, text="Enter your move:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
