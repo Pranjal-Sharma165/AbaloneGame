@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import math
 import time
 import copy
@@ -74,6 +74,7 @@ GERMAN_BOARD_INIT = {
 }  #this represents the board with the german daisy game starting positions
 
 used_board = STANDARD_BOARD_INIT  # used in specifying the game board to use for the game
+current_mode = "Player VS Computer"
 
 # Set up the Tkinter root window for the game
 root = tk.Tk()
@@ -91,6 +92,24 @@ pause_time = None
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
+
+# Function to set up the board layout based on the dropdown menu at start page
+def setup_board_layout(event):
+    global current_board
+    selected_board_layout=board_layout_box.get()
+    if selected_board_layout == "Standard":
+        current_board = STANDARD_BOARD_INIT
+    elif selected_board_layout == "German Daisy":
+        current_board = GERMAN_BOARD_INIT
+    else:
+        current_board = BELGIAN_BOARD_INIT
+
+# Function to set up the game mode based on the dropdown menu at start page
+def setup_game_mode(event):
+    global current_mode
+    current_mode = game_mode_box.get()
+    current_mode_label.config(text=current_mode)
+
 
 # Function to draw a hexagon (used for board cells)
 def draw_hexagon(x, y, size, fill_color, outline_color):
@@ -261,6 +280,7 @@ def end_turn():
 def start_game():
     start_frame.pack_forget()
     top_frame.pack(fill="x", pady=5)
+    mode_frame.pack(fill="x", pady=5)
     canvas.pack()
     bottom_frame.pack(fill="x", pady=5)
     draw_board(current_board)
@@ -282,6 +302,30 @@ start_frame.pack(pady=100)
 
 start_label = tk.Label(start_frame, text="Welcome to Abalone!", font=("Arial", 24, "bold"), bg=THEME["bg"], fg=THEME["text"])
 start_label.pack(pady=20)
+
+# Creating board layout label
+board_layout_label = tk.Label(start_frame, text="Board Layout: ")
+board_layout_label.pack(pady=10)
+
+# Creating board layout box
+board_layout_box = ttk.Combobox(start_frame, state = "readonly", values = ["Standard", "German Daisy", "Belgin Daisy"])
+board_layout_box.pack(pady=5)
+board_layout_box.set("Standard")
+
+# Calling setup_board_layout function to change the board layout
+board_layout_box.bind("<<ComboboxSelected>>", setup_board_layout)
+
+# Creating game mode label
+game_mode_label = tk.Label(start_frame, text="Game Mode: ")
+game_mode_label.pack(pady=10)
+
+#Creating game mode box
+game_mode_box = ttk.Combobox(start_frame, state = "readonly", values = ["Computer VS Player", "Player VS Player", "Computer VS Computer"])
+game_mode_box.pack(pady=5)
+game_mode_box.set("Computer VS Player")
+
+#Calling setup_game_mode function to change the game mode
+game_mode_box.bind("<<ComboboxSelected>>", setup_game_mode)
 
 start_button = tk.Button(start_frame, text="Start Game", command=start_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
 start_button.pack(pady=10)
@@ -321,6 +365,11 @@ configure_button(theme_button, "#FF9800")
 configure_button(pause_button, "#9C27B0")
 configure_button(end_turn_button, "#2196F3")
 configure_button(stop_button, "#FF0000")
+
+# Adding label to show game mode
+mode_frame = tk.Frame(root, bg=THEME["bg"])
+current_mode_label = tk.Label(mode_frame, text=current_mode, font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"], relief="solid", bd=2, padx=10, pady=5)
+current_mode_label.pack(padx=5)
 
 bottom_frame = tk.Frame(root, bg=THEME["bg"])
 turn_label = tk.Label(
