@@ -15,7 +15,7 @@ THEME_DARK = {"bg": "#2E2E2E", "hex_bg": "#444444", "hex_outline": "#FFFFFF", "t
 THEME_BLUE = {"bg": "#A0C2FF", "hex_bg": "#80B3FF", "hex_outline": "#1E90FF", "text": "#000000", "btn_bg": "#A1C8E0", "btn_fg": "#000000"}
 THEME_GREEN = {"bg": "#CCE6CC", "hex_bg": "#80E680", "hex_outline": "#32CD32", "text": "#000000", "btn_bg": "#80D68B", "btn_fg": "#000000"}
 THEME_PURPLE = {"bg": "#D6B7D6", "hex_bg": "#C29AC7", "hex_outline": "#800080", "text": "#000000", "btn_bg": "#D29BE3", "btn_fg": "#000000"}
-THEME_ORANGE = {"bg": "#FFCC99", "hex_bg": "#FFB84D", "hex_outline": "#FF6600", "text": "#000000", "btn_bg": "#FFBF00", "btn_fg": "#000000"}
+THEME_BROWN = {"bg": "#D2B48C", "hex_bg": "#C19A6B", "hex_outline": "#8B5A2B", "text": "#000000", "btn_bg": "#A67B5B", "btn_fg": "#000000"}
 
 # Default theme selected (can be changed dynamically)
 THEME = THEME_LIGHT
@@ -32,7 +32,7 @@ THEMES = {
     "Blue": THEME_BLUE,
     "Green": THEME_GREEN,
     "Purple": THEME_PURPLE,
-    "Orange": THEME_ORANGE
+    "Brown": THEME_BROWN
 }
 
 # Initial board configurations for various game types - Standard
@@ -172,16 +172,22 @@ def draw_board(board:dict) -> None:
             draw_hexagon(x, y, HEX_SIZE, THEME["hex_bg"], THEME["hex_outline"])
             cell_value = board[cell_key]
             if cell_value == BLACK_MARBLE:
-                draw_marble(x, y, HEX_SIZE, THEME["hex_outline"], "#000000")
-                canvas.create_text(x, y, text=cell_key, fill="#FFFFFF", font=("Arial", 10, "bold"))
+                draw_marble(x, y, HEX_SIZE, THEME["hex_outline"], "#000000")  # Black marble
+                text_color = "#e65252"  # White text for visibility
             elif cell_value == WHITE_MARBLE:
-                draw_marble(x, y, HEX_SIZE, THEME["hex_bg"], "#000000")
-                canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
+                draw_marble(x, y, HEX_SIZE, THEME["hex_bg"], "#000000")  # White marble
+                text_color = "#1e1b26"  # Black text for visibility
             else:
-                canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
+                text_color = THEME["text"]  # Default theme text color for empty spaces
+
+            canvas.create_text(x, y, text=cell_key, fill=text_color, font=("Arial", 10, "bold"))
 
 
 def update_turn_display():
+    """
+        Updates the turn display label to indicate the current player and adjusts the label's background
+        and foreground colors accordingly.
+    """
     player_colors = {
         "Black": {"bg": "black", "fg": "white"},
         "White": {"bg": "white", "fg": "black"}
@@ -199,6 +205,10 @@ def update_turn_display():
 
 
 def switch_theme(selected_theme=None):
+    """
+       Switches the game theme to the selected theme or cycles through available themes if none is selected.
+       Updates the board and buttons accordingly.
+    """
     global THEME, theme_mode
     if selected_theme:
         THEME = THEMES[selected_theme]
@@ -216,9 +226,16 @@ def switch_theme(selected_theme=None):
 
 
 def change_theme():
+    """
+        Calls switch_theme() to cycle through available themes.
+    """
     switch_theme()
 
 def reset_game_state():
+    """
+       Resets the game state variables, including player turns, move count, timers, and board state.
+       Refreshes the UI elements and redraws the board.
+    """
     global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board
     current_player = "Black"
     move_count = 0
@@ -234,10 +251,16 @@ def reset_game_state():
     draw_board(current_board)
 
 def reset_game():
+    """
+        Resets the game state and restarts the timer.
+    """
     reset_game_state()
     start_timer()
 
 def stop_game():
+    """
+       Stops the game, resets the state, and hides game elements to return to the start screen.
+    """
     reset_game_state()
     top_frame.pack_forget()
     mode_frame.pack_forget()
@@ -250,6 +273,9 @@ def stop_game():
     start_frame.pack(pady=100)
 
 def toggle_pause():
+    """
+        Toggles the pause state of the game. Updates button appearance and game timer accordingly.
+    """
     global is_paused, pause_time, start_time
     if is_paused:
         is_paused = False
@@ -266,6 +292,9 @@ def toggle_pause():
 
 
 def start_timer():
+    """
+        Starts or updates the game timer if the game is not paused.
+    """
     global start_time
     if not is_paused:
         if start_time is None:
@@ -276,6 +305,10 @@ def start_timer():
 
 
 def end_turn():
+    """
+        Ends the current player's turn, updates the move count, and switches the player.
+        Also manages timing for each player's turns.
+    """
     global current_player, move_count, start_time, is_paused, pause_time
     if start_time is not None:
         elapsed_time = time.time() - start_time
@@ -291,6 +324,9 @@ def end_turn():
 
 
 def start_game():
+    """
+        Initializes and starts the game by displaying all UI elements and starting the timer.
+    """
     start_frame.pack_forget()
     top_frame.pack(fill="x", pady=5)
     mode_frame.pack(fill="x", pady=5)
@@ -305,10 +341,16 @@ def start_game():
 
 
 def exit_game():
+    """
+        Prompts the user for confirmation before exiting the game.
+    """
     if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
         root.destroy()
 
 def configure_button(button, bg_color, fg_color="white", active_bg=None, active_fg="white"):
+    """
+        Configures a button's appearance including background, foreground, and active colors.
+    """
     active_bg = active_bg if active_bg else bg_color
     button.config(bg=bg_color, fg=fg_color, activebackground=active_bg, activeforeground=active_fg)
 
