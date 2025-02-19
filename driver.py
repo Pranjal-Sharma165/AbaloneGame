@@ -244,6 +244,7 @@ def stop_game():
     score_frame.pack_forget()
     canvas.pack_forget()
     output_frame.pack_forget()
+    log_frame.pack_forget()
     bottom_frame.pack_forget()
     command_frame.pack_forget()
     start_frame.pack(pady=100)
@@ -296,6 +297,7 @@ def start_game():
     score_frame.pack(side="top")
     canvas.pack()
     output_frame.pack(side="right", padx=20, pady=(0, 90))
+    log_frame.pack(side="bottom")
     bottom_frame.pack(fill="x", pady=5)
     draw_board(current_board)
     start_timer()
@@ -320,6 +322,30 @@ def undo_move():
     global used_board, current_board
     current_board = copy.deepcopy(used_board)
     draw_board(current_board)
+
+
+def display_ai_move_log():
+    """
+    Displays the complete log history for AI suggested moves.
+    """
+    move_window = tk.Toplevel()
+    move_window.title("AI Move History Log")
+    move_window.geometry("400x300")
+
+    ai_move_label = (tk.Label(move_window, text="AI move log displayed here"))
+    ai_move_label.pack()
+
+
+def display_turn_duration_log():
+    """
+    Displays the complete log history for turn durations, including total aggregate time.
+    """
+    time_window = tk.Toplevel()
+    time_window.title("Turn Duration History Log")
+    time_window.geometry("400x300")
+
+    time_duration_label = (tk.Label(time_window, text="Turn duration log displayed here"))
+    time_duration_label.pack()
 
 
 start_frame = tk.Frame(root, bg=THEME["bg"])
@@ -368,7 +394,7 @@ end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THE
 stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 
 
-# scoreboard UI that displays the remaining marbles for each player
+# Scoreboard UI that displays the remaining marbles for each player
 score_frame = tk.Frame(root, bg=THEME["bg"])
 white_score_label = tk.Label(score_frame, text="White marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
 white_score_label.pack(side="left", padx=(0,260))
@@ -403,7 +429,7 @@ configure_button(undo_button, "#eb6e34")
 configure_button(end_turn_button, "#2196F3")
 configure_button(stop_button, "#FF0000")
 
-# output box UI that displays last turn duration, previous move, and suggested next move
+# Output box UI that displays last turn duration, previous move, and suggested next move
 output_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
 
 move_duration_label = tk.Label(output_frame, text="Duration of last turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
@@ -413,6 +439,13 @@ prev_move_label.pack(side="top", padx=10, fill="both")
 next_move_label = tk.Label(output_frame, text="Next move: b3a3, c3b3", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
 next_move_label.pack(side="top", padx=10, fill="both")
 
+# Log button UI that includes two buttons to display turn duration and AI move history logs
+log_frame = tk.Frame(root, bg=THEME["bg"])
+
+move_history_button = tk.Button(log_frame, text="AI Move History", command=display_ai_move_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+move_history_button.pack(side="left", padx=(0,10))
+time_history_button = tk.Button(log_frame, text="Turn Duration History", command=display_turn_duration_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+time_history_button.pack(side="left")
 
 # Adding label to show game mode
 mode_frame = tk.Frame(root, bg=THEME["bg"])
