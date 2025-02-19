@@ -304,6 +304,17 @@ def configure_button(button, bg_color, fg_color="white", active_bg=None, active_
     button.config(bg=bg_color, fg=fg_color, activebackground=active_bg, activeforeground=active_fg)
 
 
+def undo_move():
+    """
+    Undo the last move when button is clicked.
+
+    :return: None
+    """
+    global current_board
+    current_board = copy.deepcopy(STANDARD_BOARD_INIT)
+    draw_board(current_board)
+
+
 start_frame = tk.Frame(root, bg=THEME["bg"])
 start_frame.pack(pady=100)
 
@@ -345,9 +356,10 @@ timer_label = tk.Label(top_frame, text="Time: 0s", font=("Arial", 12), bg=THEME[
 reset_button = tk.Button(top_frame, text="Reset Game", command=reset_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 theme_button = tk.Button(top_frame, text="Switch Theme", command=switch_theme, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 pause_button = tk.Button(top_frame, text="Pause Game", command=toggle_pause, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-undo_button = tk.Button(top_frame, text="Undo Move", bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+undo_button = tk.Button(top_frame, text="Undo Move", command=undo_move, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+
 
 # scoreboard UI that displays the remaining marbles for each player
 score_frame = tk.Frame(root, bg=THEME["bg"])
