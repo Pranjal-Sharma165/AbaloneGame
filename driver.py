@@ -602,6 +602,16 @@ def process_move_command() -> None:
     """
     move_text = move_entry.get()
     source_list, dest_list = parse_move_input(move_text)
+
+    expected_color = BLACK_MARBLE if current_player == "Black" else WHITE_MARBLE
+    for coord in source_list:
+        if current_board.get(coord) != expected_color:
+            messagebox.showerror("Invalid Move", "You can only move your marbles!")
+            move_entry.delete(0, tk.END)
+            return
+
+    move_text = move_entry.get()
+    source_list, dest_list = parse_move_input(move_text)
     try:
         direction = validate_move_directions(source_list, dest_list)
     except SomeError as e:
@@ -611,6 +621,7 @@ def process_move_command() -> None:
 
     if move_marbles_cmd(source_list, direction):
         draw_board(current_board)
+        end_turn()
     else:
         raise SomeError("to be implemented soon")
     move_entry.delete(0, tk.END)
@@ -623,6 +634,9 @@ entry_frame = tk.Frame(command_frame, bg=THEME["bg"])
 entry_frame.pack(pady=3)
 move_entry = tk.Entry(entry_frame, width=50, font=("Arial", 12))
 move_entry.pack(side="left", padx=5)
+
+move_entry.bind("<Return>", lambda event: process_move_command())
+
 move_button = tk.Button(entry_frame, text="Move", command=process_move_command, font=("Arial", 12), bg=THEME["btn_bg"], fg=THEME["btn_fg"])
 move_button.pack(side="left", padx=5)
 
