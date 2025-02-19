@@ -4,21 +4,27 @@ import math
 import time
 import copy
 
-
+# Constant values for board size and hexagon size
 BOARD_SIZE = 600
 HEX_SIZE = 30
-THEME_LIGHT = {"bg": "#F0F0F0", "hex_bg": "#FFFFFF", "hex_outline": "#000000", "text": "#000000", "btn_bg": "#D3D3D3", "btn_fg": "#000000"}
+
+# Define themes with background colors and element color schemes
+THEME_LIGHT = {"bg": "#D3D3D3", "hex_bg": "#E0E0E0", "hex_outline": "#000000", "text": "#000000", "btn_bg": "#B0B0B0", "btn_fg": "#000000"}
 THEME_DARK = {"bg": "#2E2E2E", "hex_bg": "#444444", "hex_outline": "#FFFFFF", "text": "#FFFFFF", "btn_bg": "#555555", "btn_fg": "#FFFFFF"}
-THEME_BLUE = {"bg": "#B3D9FF", "hex_bg": "#99CCFF", "hex_outline": "#1E90FF", "text": "#000000", "btn_bg": "#ADD8E6", "btn_fg": "#000000"}
-THEME_GREEN = {"bg": "#E6F7E6", "hex_bg": "#99FF99", "hex_outline": "#32CD32", "text": "#000000", "btn_bg": "#90EE90", "btn_fg": "#000000"}
-THEME_PURPLE = {"bg": "#F0E6F6", "hex_bg": "#D8B0D8", "hex_outline": "#800080", "text": "#000000", "btn_bg": "#DDA0DD", "btn_fg": "#000000"}
-THEME_ORANGE = {"bg": "#FFE6CC", "hex_bg": "#FFD580", "hex_outline": "#FF6600", "text": "#000000", "btn_bg": "#FFD700", "btn_fg": "#000000"}
+THEME_BLUE = {"bg": "#A0C2FF", "hex_bg": "#80B3FF", "hex_outline": "#1E90FF", "text": "#000000", "btn_bg": "#A1C8E0", "btn_fg": "#000000"}
+THEME_GREEN = {"bg": "#CCE6CC", "hex_bg": "#80E680", "hex_outline": "#32CD32", "text": "#000000", "btn_bg": "#80D68B", "btn_fg": "#000000"}
+THEME_PURPLE = {"bg": "#D6B7D6", "hex_bg": "#C29AC7", "hex_outline": "#800080", "text": "#000000", "btn_bg": "#D29BE3", "btn_fg": "#000000"}
+THEME_ORANGE = {"bg": "#FFCC99", "hex_bg": "#FFB84D", "hex_outline": "#FF6600", "text": "#000000", "btn_bg": "#FFBF00", "btn_fg": "#000000"}
+
+# Default theme selected (can be changed dynamically)
 THEME = THEME_LIGHT
 
-WHITE_MARBLE = "White"
-BLACK_MARBLE = "Black"
+# Define marble colors for white, black, and empty spaces
+WHITE_MARBLE = "#D9D9D9"
+BLACK_MARBLE = "#8A8A8A"
 NO_MARBLE = "Blank"
 
+# Store all themes in a dictionary for easy switching
 THEMES = {
     "Light": THEME_LIGHT,
     "Dark": THEME_DARK,
@@ -28,6 +34,7 @@ THEMES = {
     "Orange": THEME_ORANGE
 }
 
+# Initial board configurations for various game types - Standard
 STANDARD_BOARD_INIT = {
     "I5": WHITE_MARBLE, "I6": WHITE_MARBLE, "I7": WHITE_MARBLE, "I8": WHITE_MARBLE, "I9": WHITE_MARBLE,
     "H4": WHITE_MARBLE, "H5": WHITE_MARBLE, "H6": WHITE_MARBLE, "H7": WHITE_MARBLE, "H8": WHITE_MARBLE, "H9": WHITE_MARBLE,
@@ -40,6 +47,7 @@ STANDARD_BOARD_INIT = {
     "A1": BLACK_MARBLE, "A2": BLACK_MARBLE, "A3": BLACK_MARBLE, "A4": BLACK_MARBLE, "A5": BLACK_MARBLE
 }  # this represents the board with the classic game starting positions
 
+# Initial board configurations for various game types - Belgian
 BELGIAN_BOARD_INIT = {
     "I5": WHITE_MARBLE, "I6": WHITE_MARBLE, "I7": NO_MARBLE, "I8": BLACK_MARBLE, "I9": BLACK_MARBLE,
     "H4": WHITE_MARBLE, "H5": WHITE_MARBLE, "H6": WHITE_MARBLE, "H7": BLACK_MARBLE, "H8": BLACK_MARBLE, "H9": BLACK_MARBLE,
@@ -52,6 +60,7 @@ BELGIAN_BOARD_INIT = {
     "A1": BLACK_MARBLE, "A2": BLACK_MARBLE, "A3": NO_MARBLE, "A4": WHITE_MARBLE, "A5": WHITE_MARBLE
 }  # this represents the board with the belgian daisy game starting positions
 
+# Initial board configurations for various game types - German
 GERMAN_BOARD_INIT = {
     "I5": NO_MARBLE, "I6": NO_MARBLE, "I7": NO_MARBLE, "I8": NO_MARBLE, "I9": NO_MARBLE,
     "H4": WHITE_MARBLE, "H5": WHITE_MARBLE, "H6": NO_MARBLE, "H7": NO_MARBLE, "H8": BLACK_MARBLE, "H9": BLACK_MARBLE,
@@ -66,24 +75,27 @@ GERMAN_BOARD_INIT = {
 
 used_board = STANDARD_BOARD_INIT  # used in specifying the game board to use for the game
 
+# Set up the Tkinter root window for the game
 root = tk.Tk()
 root.title("Abalone Game")
 root.geometry("1000x800")
 
+# Global variables for tracking the game state
 current_player = "Black"
-move_count = 0
+move_counts = {"Black": 0, "White": 0}
 theme_mode = "Light"
 is_paused = False
 player_times = {"Black": [], "White": []}
 start_time = None
 pause_time = None
 
-
+# Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
 
+# Function to draw a hexagon (used for board cells)
 def draw_hexagon(x, y, size, fill_color, outline_color):
-    angle = 60
-    coords = []
+    angle = 60  # Angle between vertices of the hexagon
+    coords = [] # List to hold hexagon vertices
     for i in range(6):
         x_i = x + size * math.cos(math.radians(angle * i))
         y_i = y + size * math.sin(math.radians(angle * i))
@@ -100,19 +112,10 @@ def draw_marble(x, y, size, fill_color, outline_color):
     :param fill_color: a string of hexadecimal representing the circle's fill color
     :param outline_color: a string of hexadecimal representing the circle's outline color
     """
-    coords = []
-    angle = 60
-    x_zero = x - size * 0.9
-    y_zero = y + size * math.sin(math.radians(angle))
-    x_1 = x + size * 0.9
-    y_1 = y - size * math.sin(math.radians(angle))
-    coords.append(x_zero)
-    coords.append(y_zero)
-    coords.append(x_1)
-    coords.append(y_1)
-    canvas.create_oval(coords, fill=fill_color, outline=outline_color)
+    radius = size * 0.9
+    canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill_color, outline=outline_color)
 
-
+# Function to draw the entire game board, iterating through the board dictionary
 def draw_board(board:dict) -> None:
     """
     Draws the game board based on a given board state as a dictionary.
@@ -151,26 +154,20 @@ def draw_board(board:dict) -> None:
 
 
 def update_turn_display():
-    if current_player == "Black":
-        turn_label.config(
-            text=f"Current Player: {current_player}",
-            bg="black",
-            fg="white",
-            relief="solid",
-            bd=2,
-            padx=10,
-            pady=5
-        )
-    else:
-        turn_label.config(
-            text=f"Current Player: {current_player}",
-            bg="white",
-            fg="black",
-            relief="solid",
-            bd=2,
-            padx=10,
-            pady=5
-        )
+    player_colors = {
+        "Black": {"bg": "black", "fg": "white"},
+        "White": {"bg": "white", "fg": "black"}
+    }
+    colors = player_colors.get(current_player, {"bg": "black", "fg": "white"})
+    turn_label.config(
+        text=f"Current Player: {current_player}",
+        bg=colors["bg"],
+        fg=colors["fg"],
+        relief="solid",
+        bd=2,
+        padx=10,
+        pady=5
+    )
 
 
 def switch_theme(selected_theme=None):
@@ -186,19 +183,14 @@ def switch_theme(selected_theme=None):
         THEME = THEMES[theme_mode]
     draw_board(current_board)
     update_turn_display()
-    pause_button.config(
-        bg="#FF6347" if is_paused else THEME.get("btn_bg", "#D3D3D3"),
-        fg="white" if is_paused else THEME.get("btn_fg", "#000000"),
-        activebackground="#FF6347" if is_paused else THEME.get("btn_bg", "#D3D3D3"),
-        activeforeground="white" if is_paused else THEME.get("btn_fg", "#000000")
-    )
+    configure_button(pause_button, "#FF6347" if is_paused else THEME.get("btn_bg", "#D3D3D3"),
+                     "white" if is_paused else THEME.get("btn_fg", "#000000"))
 
 
 def change_theme():
     switch_theme()
 
-
-def reset_game():
+def reset_game_state():
     global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board
     current_player = "Black"
     move_count = 0
@@ -209,34 +201,35 @@ def reset_game():
     move_counter_label.config(text=f"Moves: {move_count}")
     timer_label.config(text="Time: 0s")
     update_turn_display()
+    canvas.delete("all")
     current_board = copy.deepcopy(STANDARD_BOARD_INIT)
     draw_board(current_board)
+
+def reset_game():
+    reset_game_state()
     start_timer()
 
+def stop_game():
+    reset_game_state()
+    top_frame.pack_forget()
+    canvas.pack_forget()
+    bottom_frame.pack_forget()
+    command_frame.pack_forget()
+    start_frame.pack(pady=100)
 
 def toggle_pause():
     global is_paused, pause_time, start_time
     if is_paused:
         is_paused = False
-        pause_button.config(
-            text="Pause Game",
-            bg=THEME["btn_bg"],
-            fg=THEME["btn_fg"],
-            activebackground=THEME["btn_bg"],
-            activeforeground=THEME["btn_fg"]
-        )
+        configure_button(pause_button, THEME["btn_bg"], THEME["btn_fg"])
+        pause_button.config(text="Pause Game")
         if pause_time is not None:
             start_time += time.time() - pause_time
             pause_time = None
     else:
         is_paused = True
-        pause_button.config(
-            text="Resume Game",
-            bg="#FF6347",
-            fg="white",
-            activebackground="#FF6347",
-            activeforeground="white"
-        )
+        configure_button(pause_button, "#FF6347", "white")
+        pause_button.config(text="Resume Game")
         pause_time = time.time()
 
 
@@ -256,8 +249,8 @@ def end_turn():
         elapsed_time = time.time() - start_time
         player_times[current_player].append(elapsed_time)
         start_time = None
-    move_count += 1
-    move_counter_label.config(text=f"Moves: {move_count}")
+    move_counts[current_player] += 1
+    move_counter_label.config(text=f"Moves: {move_counts}")
     current_player = "White" if current_player == "Black" else "Black"
     is_paused = False
     pause_time = None
@@ -279,6 +272,10 @@ def exit_game():
     if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
         root.destroy()
 
+def configure_button(button, bg_color, fg_color="white", active_bg=None, active_fg="white"):
+    active_bg = active_bg if active_bg else bg_color
+    button.config(bg=bg_color, fg=fg_color, activebackground=active_bg, activeforeground=active_fg)
+
 
 start_frame = tk.Frame(root, bg=THEME["bg"])
 start_frame.pack(pady=100)
@@ -298,12 +295,14 @@ reset_button = tk.Button(top_frame, text="Reset Game", command=reset_game, bg=TH
 theme_button = tk.Button(top_frame, text="Switch Theme", command=switch_theme, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 pause_button = tk.Button(top_frame, text="Pause Game", command=toggle_pause, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 
 timer_label.pack(side="left", padx=10)
 reset_button.pack(side="left", padx=10)
 theme_button.pack(side="left", padx=10)
 pause_button.pack(side="left", padx=10)
 end_turn_button.pack(side="left", padx=10)
+stop_button.pack(side="left", padx=10)
 
 theme_label = tk.Label(top_frame, text="Choose Theme", font=("Arial", 12))
 theme_label.pack(side="left", padx=10)
@@ -315,13 +314,13 @@ theme_button.pack_forget()
 theme_dropdown = tk.OptionMenu(top_frame, tk.StringVar(value=theme_mode), *theme_options, command=switch_theme)
 theme_dropdown.pack(side="left", padx=10)
 
-start_button.config(bg="#4CAF50", fg="white", activebackground="#45a049", activeforeground="white")
-exit_button.config(bg="#f44336", fg="white", activebackground="#e7352e", activeforeground="white")
-
-reset_button.config(bg="#008CBA", fg="white", activebackground="#007bb5", activeforeground="white")
-theme_button.config(bg="#FF9800", fg="white", activebackground="#f57c00", activeforeground="white")
-pause_button.config(bg="#9C27B0", fg="white", activebackground="#8e24aa", activeforeground="white")
-end_turn_button.config(bg="#2196F3", fg="white", activebackground="#1976d2", activeforeground="white")
+configure_button(start_button, "#4CAF50")
+configure_button(exit_button, "#f44336")
+configure_button(reset_button, "#008CBA")
+configure_button(theme_button, "#FF9800")
+configure_button(pause_button, "#9C27B0")
+configure_button(end_turn_button, "#2196F3")
+configure_button(stop_button, "#FF0000")
 
 bottom_frame = tk.Frame(root, bg=THEME["bg"])
 turn_label = tk.Label(
@@ -336,7 +335,7 @@ turn_label = tk.Label(
     pady=5
 )
 turn_label.pack(side="left", padx=10)
-move_counter_label = tk.Label(bottom_frame, text=f"Moves: {move_count}", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
+move_counter_label = tk.Label(bottom_frame, text=f"Moves: {move_counts}", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
 
 turn_label.pack(side="left", padx=10)
 move_counter_label.pack(side="left", padx=10)
