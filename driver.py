@@ -240,6 +240,7 @@ def reset_game():
 def stop_game():
     reset_game_state()
     top_frame.pack_forget()
+    mode_frame.pack_forget()
     score_frame.pack_forget()
     canvas.pack_forget()
     output_frame.pack_forget()
@@ -369,9 +370,9 @@ stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME
 
 # scoreboard UI that displays the remaining marbles for each player
 score_frame = tk.Frame(root, bg=THEME["bg"])
-white_score_label = tk.Label(score_frame, text="White marbles remaining: 14", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
+white_score_label = tk.Label(score_frame, text="White marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
 white_score_label.pack(side="left", padx=(0,260))
-black_score_label = tk.Label(score_frame, text="Black marbles remaining: 14", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
+black_score_label = tk.Label(score_frame, text="Black marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
 black_score_label.pack(side="right", padx=(260,0))
 
 
