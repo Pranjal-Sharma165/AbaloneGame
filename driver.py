@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 import math
 import time
+import copy
+
 
 BOARD_SIZE = 600
 HEX_SIZE = 30
@@ -13,6 +15,10 @@ THEME_PURPLE = {"bg": "#F0E6F6", "hex_bg": "#D8B0D8", "hex_outline": "#800080", 
 THEME_ORANGE = {"bg": "#FFE6CC", "hex_bg": "#FFD580", "hex_outline": "#FF6600", "text": "#000000", "btn_bg": "#FFD700", "btn_fg": "#000000"}
 THEME = THEME_LIGHT
 
+WHITE_MARBLE = "White"
+BLACK_MARBLE = "Black"
+NO_MARBLE = "Blank"
+
 THEMES = {
     "Light": THEME_LIGHT,
     "Dark": THEME_DARK,
@@ -21,6 +27,44 @@ THEMES = {
     "Purple": THEME_PURPLE,
     "Orange": THEME_ORANGE
 }
+
+STANDARD_BOARD_INIT = {
+    "I5": WHITE_MARBLE, "I6": WHITE_MARBLE, "I7": WHITE_MARBLE, "I8": WHITE_MARBLE, "I9": WHITE_MARBLE,
+    "H4": WHITE_MARBLE, "H5": WHITE_MARBLE, "H6": WHITE_MARBLE, "H7": WHITE_MARBLE, "H8": WHITE_MARBLE, "H9": WHITE_MARBLE,
+    "G3": NO_MARBLE, "G4": NO_MARBLE, "G5": WHITE_MARBLE, "G6": WHITE_MARBLE, "G7": WHITE_MARBLE, "G8": NO_MARBLE, "G9": NO_MARBLE,
+    "F2": NO_MARBLE, "F3": NO_MARBLE, "F4": NO_MARBLE, "F5": NO_MARBLE, "F6": NO_MARBLE, "F7": NO_MARBLE, "F8": NO_MARBLE, "F9": NO_MARBLE,
+    "E1": NO_MARBLE, "E2": NO_MARBLE, "E3": NO_MARBLE, "E4": NO_MARBLE, "E5": NO_MARBLE, "E6": NO_MARBLE, "E7": NO_MARBLE, "E8": NO_MARBLE, "E9": NO_MARBLE,
+    "D1": NO_MARBLE, "D2": NO_MARBLE, "D3": NO_MARBLE, "D4": NO_MARBLE, "D5": NO_MARBLE, "D6": NO_MARBLE, "D7": NO_MARBLE, "D8": NO_MARBLE,
+    "C1": NO_MARBLE, "C2": NO_MARBLE, "C3": BLACK_MARBLE, "C4": BLACK_MARBLE, "C5": BLACK_MARBLE, "C6": NO_MARBLE, "C7": NO_MARBLE,
+    "B1": BLACK_MARBLE, "B2": BLACK_MARBLE, "B3": BLACK_MARBLE, "B4": BLACK_MARBLE, "B5": BLACK_MARBLE, "B6": BLACK_MARBLE,
+    "A1": BLACK_MARBLE, "A2": BLACK_MARBLE, "A3": BLACK_MARBLE, "A4": BLACK_MARBLE, "A5": BLACK_MARBLE
+}
+
+BELGIAN_BOARD_INIT = {
+    "I5": WHITE_MARBLE, "I6": WHITE_MARBLE, "I7": NO_MARBLE, "I8": BLACK_MARBLE, "I9": BLACK_MARBLE,
+    "H4": WHITE_MARBLE, "H5": WHITE_MARBLE, "H6": WHITE_MARBLE, "H7": BLACK_MARBLE, "H8": BLACK_MARBLE, "H9": BLACK_MARBLE,
+    "G3": NO_MARBLE, "G4": WHITE_MARBLE, "G5": WHITE_MARBLE, "G6": NO_MARBLE, "G7": BLACK_MARBLE, "G8": BLACK_MARBLE, "G9": NO_MARBLE,
+    "F2": NO_MARBLE, "F3": NO_MARBLE, "F4": NO_MARBLE, "F5": NO_MARBLE, "F6": NO_MARBLE, "F7": NO_MARBLE, "F8": NO_MARBLE, "F9": NO_MARBLE,
+    "E1": NO_MARBLE, "E2": NO_MARBLE, "E3": NO_MARBLE, "E4": NO_MARBLE, "E5": NO_MARBLE, "E6": NO_MARBLE, "E7": NO_MARBLE, "E8": NO_MARBLE, "E9": NO_MARBLE,
+    "D1": NO_MARBLE, "D2": NO_MARBLE, "D3": NO_MARBLE, "D4": NO_MARBLE, "D5": NO_MARBLE, "D6": NO_MARBLE, "D7": NO_MARBLE, "D8": NO_MARBLE,
+    "C1": NO_MARBLE, "C2": BLACK_MARBLE, "C3": BLACK_MARBLE, "C4": NO_MARBLE, "C5": WHITE_MARBLE, "C6": WHITE_MARBLE, "C7": NO_MARBLE,
+    "B1": BLACK_MARBLE, "B2": BLACK_MARBLE, "B3": BLACK_MARBLE, "B4": WHITE_MARBLE, "B5": WHITE_MARBLE, "B6": WHITE_MARBLE,
+    "A1": BLACK_MARBLE, "A2": BLACK_MARBLE, "A3": NO_MARBLE, "A4": WHITE_MARBLE, "A5": WHITE_MARBLE
+}
+
+GERMAN_BOARD_INIT = {
+    "I5": NO_MARBLE, "I6": NO_MARBLE, "I7": NO_MARBLE, "I8": NO_MARBLE, "I9": NO_MARBLE,
+    "H4": WHITE_MARBLE, "H5": WHITE_MARBLE, "H6": NO_MARBLE, "H7": NO_MARBLE, "H8": BLACK_MARBLE, "H9": BLACK_MARBLE,
+    "G3": WHITE_MARBLE, "G4": WHITE_MARBLE, "G5": WHITE_MARBLE, "G6": NO_MARBLE, "G7": BLACK_MARBLE, "G8": BLACK_MARBLE, "G9": BLACK_MARBLE,
+    "F2": NO_MARBLE, "F3": WHITE_MARBLE, "F4": WHITE_MARBLE, "F5": NO_MARBLE, "F6": NO_MARBLE, "F7": BLACK_MARBLE, "F8": BLACK_MARBLE, "F9": NO_MARBLE,
+    "E1": NO_MARBLE, "E2": NO_MARBLE, "E3": NO_MARBLE, "E4": NO_MARBLE, "E5": NO_MARBLE, "E6": NO_MARBLE, "E7": NO_MARBLE, "E8": NO_MARBLE, "E9": NO_MARBLE,
+    "D1": NO_MARBLE, "D2": BLACK_MARBLE, "D3": BLACK_MARBLE, "D4": NO_MARBLE, "D5": NO_MARBLE, "D6": WHITE_MARBLE, "D7": WHITE_MARBLE, "D8": NO_MARBLE,
+    "C1": BLACK_MARBLE, "C2": BLACK_MARBLE, "C3": BLACK_MARBLE, "C4": NO_MARBLE, "C5": WHITE_MARBLE, "C6": WHITE_MARBLE, "C7": WHITE_MARBLE,
+    "B1": BLACK_MARBLE, "B2": BLACK_MARBLE, "B3": NO_MARBLE, "B4": NO_MARBLE, "B5": WHITE_MARBLE, "B6": WHITE_MARBLE,
+    "A1": NO_MARBLE, "A2": NO_MARBLE, "A3": NO_MARBLE, "A4": NO_MARBLE, "A5": NO_MARBLE
+}
+
+used_board = STANDARD_BOARD_INIT
 
 root = tk.Tk()
 root.title("Abalone Game")
@@ -33,47 +77,9 @@ is_paused = False
 player_times = {"Black": [], "White": []}
 start_time = None
 pause_time = None
-white_marble = "White"
-black_marble = "Black"
-no_marble = "Blank"
 
-standard_board_init = {
-    "I5": white_marble, "I6": white_marble, "I7": white_marble, "I8": white_marble, "I9": white_marble,
-    "H4": white_marble, "H5": white_marble, "H6": white_marble, "H7": white_marble, "H8": white_marble, "H9": white_marble,
-    "G3": no_marble, "G4": no_marble, "G5": white_marble, "G6": white_marble, "G7": white_marble, "G8": no_marble, "G9": no_marble,
-    "F2": no_marble, "F3": no_marble, "F4": no_marble, "F5": no_marble, "F6": no_marble, "F7": no_marble, "F8": no_marble, "F9": no_marble,
-    "E1": no_marble, "E2": no_marble, "E3": no_marble, "E4": no_marble, "E5": no_marble, "E6": no_marble, "E7": no_marble, "E8": no_marble, "E9": no_marble,
-    "D1": no_marble, "D2": no_marble, "D3": no_marble, "D4": no_marble, "D5": no_marble, "D6": no_marble, "D7": no_marble, "D8": no_marble,
-    "C1": no_marble, "C2": no_marble, "C3": black_marble, "C4": black_marble, "C5": black_marble, "C6": no_marble, "C7": no_marble,
-    "B1": black_marble, "B2": black_marble, "B3": black_marble, "B4": black_marble, "B5": black_marble, "B6": black_marble,
-    "A1": black_marble, "A2": black_marble, "A3": black_marble, "A4": black_marble, "A5": black_marble
-}
 
-belgian_board_init = {
-    "I5": white_marble, "I6": white_marble, "I7": no_marble, "I8": black_marble, "I9": black_marble,
-    "H4": white_marble, "H5": white_marble, "H6": white_marble, "H7": black_marble, "H8": black_marble, "H9": black_marble,
-    "G3": no_marble, "G4": white_marble, "G5": white_marble, "G6": no_marble, "G7": black_marble, "G8": black_marble, "G9": no_marble,
-    "F2": no_marble, "F3": no_marble, "F4": no_marble, "F5": no_marble, "F6": no_marble, "F7": no_marble, "F8": no_marble, "F9": no_marble,
-    "E1": no_marble, "E2": no_marble, "E3": no_marble, "E4": no_marble, "E5": no_marble, "E6": no_marble, "E7": no_marble, "E8": no_marble, "E9": no_marble,
-    "D1": no_marble, "D2": no_marble, "D3": no_marble, "D4": no_marble, "D5": no_marble, "D6": no_marble, "D7": no_marble, "D8": no_marble,
-    "C1": no_marble, "C2": black_marble, "C3": black_marble, "C4": no_marble, "C5": white_marble, "C6": white_marble, "C7": no_marble,
-    "B1": black_marble, "B2": black_marble, "B3": black_marble, "B4": white_marble, "B5": white_marble, "B6": white_marble,
-    "A1": black_marble, "A2": black_marble, "A3": no_marble, "A4": white_marble, "A5": white_marble
-}
-
-german_board_init = {
-    "I5": no_marble, "I6": no_marble, "I7": no_marble, "I8": no_marble, "I9": no_marble,
-    "H4": white_marble, "H5": white_marble, "H6": no_marble, "H7": no_marble, "H8": black_marble, "H9": black_marble,
-    "G3": white_marble, "G4": white_marble, "G5": white_marble, "G6": no_marble, "G7": black_marble, "G8": black_marble, "G9": black_marble,
-    "F2": no_marble, "F3": white_marble, "F4": white_marble, "F5": no_marble, "F6": no_marble, "F7": black_marble, "F8": black_marble, "F9": no_marble,
-    "E1": no_marble, "E2": no_marble, "E3": no_marble, "E4": no_marble, "E5": no_marble, "E6": no_marble, "E7": no_marble, "E8": no_marble, "E9": no_marble,
-    "D1": no_marble, "D2": black_marble, "D3": black_marble, "D4": no_marble, "D5": no_marble, "D6": white_marble, "D7": white_marble, "D8": no_marble,
-    "C1": black_marble, "C2": black_marble, "C3": black_marble, "C4": no_marble, "C5": white_marble, "C6": white_marble, "C7": white_marble,
-    "B1": black_marble, "B2": black_marble, "B3": no_marble, "B4": no_marble, "B5": white_marble, "B6": white_marble,
-    "A1": no_marble, "A2": no_marble, "A3": no_marble, "A4": no_marble, "A5": no_marble
-}
-
-current_board = standard_board_init
+current_board = copy.deepcopy(used_board)
 
 def draw_hexagon(x, y, size, fill_color, outline_color):
     angle = 60
@@ -97,7 +103,12 @@ def draw_marble(x, y, size, fill_color, outline_color):
     coords.append(y_1)
     canvas.create_oval(coords, fill=fill_color, outline=outline_color)
 
-def draw_board(board):
+def draw_board(board:dict) -> None:
+    """
+    Draws the game board with marbles
+
+    :param board: a dictionary representing the game board
+    """
     canvas.delete("all")
     canvas.config(bg=THEME["bg"])
     rows = {}
@@ -119,14 +130,15 @@ def draw_board(board):
             y = start_y
             draw_hexagon(x, y, HEX_SIZE, THEME["hex_bg"], THEME["hex_outline"])
             cell_value = board[cell_key]
-            if cell_value == black_marble:
+            if cell_value == BLACK_MARBLE:
                 draw_marble(x, y, HEX_SIZE, THEME["hex_outline"], "#000000")
                 canvas.create_text(x, y, text=cell_key, fill="#FFFFFF", font=("Arial", 10, "bold"))
-            elif cell_value == white_marble:
+            elif cell_value == WHITE_MARBLE:
                 draw_marble(x, y, HEX_SIZE, THEME["hex_bg"], "#000000")
                 canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
             else:
                 canvas.create_text(x, y, text=cell_key, fill=THEME["text"], font=("Arial", 10, "bold"))
+
 
 def update_turn_display():
     if current_player == "Black":
@@ -174,7 +186,7 @@ def change_theme():
     switch_theme()
 
 def reset_game():
-    global current_player, move_count, player_times, start_time, is_paused, pause_time
+    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board
     current_player = "Black"
     move_count = 0
     player_times = {"Black": [], "White": []}
@@ -184,6 +196,7 @@ def reset_game():
     move_counter_label.config(text=f"Moves: {move_count}")
     timer_label.config(text="Time: 0s")
     update_turn_display()
+    current_board = copy.deepcopy(STANDARD_BOARD_INIT)
     draw_board(current_board)
     start_timer()
 
@@ -311,16 +324,81 @@ move_counter_label.pack(side="left", padx=10)
 
 canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
 
+
 class SomeError(Exception):
+    """
+    temporary error handling for all
+    """
     pass
 
-def next_row(row):
+def next_row(row: str) -> str:
+    """
+    Returns the next alphabet
+
+    :param row: a string of alphabet
+    :return: the next alphabet
+    """
     return chr(ord(row) + 1)
 
-def prev_row(row):
+def prev_row(row: str) -> str:
+    """
+    Returns the previous alphabet
+
+    :param row: a string of alphabet
+    :return: the previous alphabet
+    """
     return chr(ord(row) - 1)
 
-def transform_coordinate(coord, direction):
+def parse_move_input(move_str: str) -> tuple[list, list]:
+    """
+    Parses the move command input into source and destination lists
+
+    :param move_str: moving command following the rule
+    :return: a tuple containing the source list and destination list
+    """
+    move_str = move_str.replace(" ", "")
+    parts = move_str.split("],[")
+    part1 = parts[0].lstrip("[")
+    part2 = parts[1].rstrip("]")
+    source_list = part1.split(",")
+    dest_list = part2.split(",")
+    return source_list, dest_list
+
+def get_move_direction(source: str, dest: str) -> str:
+    """
+    Determines the move direction based on the source and destination coordinates
+
+    :param source: the starting coordinate
+    :param dest: the destination coordinate
+    :return: a string of destination coordinate
+    :raises Exception: will be updated soon
+    """
+    s_row, s_col = source[0], int(source[1:])
+    d_row, d_col = dest[0], int(dest[1:])
+    if next_row(s_row) == d_row and s_col == d_col:
+        return "upper_left"
+    elif next_row(s_row) == d_row and s_col + 1 == d_col:
+        return "upper_right"
+    elif s_row == d_row and s_col - 1 == d_col:
+        return "left"
+    elif s_row == d_row and s_col + 1 == d_col:
+        return "right"
+    elif prev_row(s_row) == d_row and s_col - 1 == d_col:
+        return "down_left"
+    elif prev_row(s_row) == d_row and s_col == d_col:
+        return "down_right"
+    else:
+        raise SomeError("to be implemented soon")
+
+def transform_coordinate(coord: str, direction: str) -> str:
+    """
+    Transforms a board coordinate in the given direction
+
+    :param coord: starting coordinate
+    :param direction: direction of destination
+    :return: new coordinate after moving
+    :raises Exception: will be implemented soon
+    """
     row = coord[0]
     col = int(coord[1:])
     if direction == "upper_left":
@@ -342,49 +420,34 @@ def transform_coordinate(coord, direction):
         new_row = prev_row(row)
         new_col = col
     else:
-        raise SomeError("To be implemented soon")
+        raise SomeError("to be implemented soon")
     return f"{new_row}{new_col}"
 
-def move_marbles_cmd(marble_coords, direction):
+
+def move_marbles_cmd(marble_coords: list, direction: str) -> bool:
+    """
+    Moves the marbles on the board to the specified direction
+
+    :param marble_coords: list of coordinates of the marble(or marbles)
+    :param direction: The direction to move
+    :return: True if the move is successful
+    """
     global current_board
     player = current_board[marble_coords[0]]
     new_coords = [transform_coordinate(coord, direction) for coord in marble_coords]
     for coord in marble_coords:
-        current_board[coord] = no_marble
+        current_board[coord] = NO_MARBLE
     for new_coord in new_coords:
         current_board[new_coord] = player
     return True
 
-def parse_move_input(move_str):
-    move_str = move_str.replace(" ", "")
-    parts = move_str.split("],[")
-    if len(parts) != 2:
-        return None, None
-    part1 = parts[0].lstrip("[")
-    part2 = parts[1].rstrip("]")
-    source_list = part1.split(",")
-    dest_list = part2.split(",")
-    return source_list, dest_list
+def process_move_command() -> None:
+    """
+    Processes the user's move command from the input field
 
-def get_move_direction(source, dest):
-    s_row, s_col = source[0], int(source[1:])
-    d_row, d_col = dest[0], int(dest[1:])
-    if next_row(s_row) == d_row and s_col == d_col:
-        return "upper_left"
-    elif next_row(s_row) == d_row and s_col + 1 == d_col:
-        return "upper_right"
-    elif s_row == d_row and s_col - 1 == d_col:
-        return "left"
-    elif s_row == d_row and s_col + 1 == d_col:
-        return "right"
-    elif prev_row(s_row) == d_row and s_col - 1 == d_col:
-        return "down_left"
-    elif prev_row(s_row) == d_row and s_col == d_col:
-        return "down_right"
-    else:
-        raise SomeError("to be implemented soon")
-
-def process_move_command():
+    Parses the move, determines the direction, moves the marbles,
+    and redraws the board
+    """
     move_text = move_entry.get()
     source_list, dest_list = parse_move_input(move_text)
     direction = get_move_direction(source_list[0], dest_list[0])
