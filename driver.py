@@ -93,9 +93,12 @@ pause_time = None
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
 
-# Function to set up the board layout based on the dropdown menu at start page
 def setup_board_layout(event):
+    """
+    Sets up the board layout based on the dropdown menu selection at the start page.
+    """
     global current_board
+    print(type(event))
     selected_board_layout=board_layout_box.get()
     if selected_board_layout == "Standard":
         current_board = STANDARD_BOARD_INIT
@@ -104,8 +107,10 @@ def setup_board_layout(event):
     else:
         current_board = BELGIAN_BOARD_INIT
 
-# Function to set up the game mode based on the dropdown menu at start page
 def setup_game_mode(event):
+    """
+     Sets up the game mode based on the dropdown menu selection at the start page.
+    """
     global current_mode
     current_mode = game_mode_box.get()
     current_mode_label.config(text=current_mode)
