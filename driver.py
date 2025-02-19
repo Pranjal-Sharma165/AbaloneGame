@@ -3,6 +3,7 @@ from tkinter import messagebox, ttk
 import math
 import time
 import copy
+import re
 
 # Constant values for board size and hexagon size
 BOARD_SIZE = 500
@@ -464,17 +465,25 @@ def parse_move_input(move_str: str) -> tuple[list, list]:
     """
     Parses the move command input into source and destination lists.
 
-    Example: Moving E5 and E6 to F6 and F7 respectively is expressed as [E5, E6], [F6, F7]
+    Example: Moving E5 and E6 to F6 and F7 respectively is expressed as e5e6,f5f6
 
     :param move_str: a string for the moving command following the required format in the example
     :return: a tuple containing the source list and destination list
     """
-    move_str = move_str.replace(" ", "")
-    parts = move_str.split("],[")
-    part1 = parts[0].lstrip("[")
-    part2 = parts[1].rstrip("]")
-    source_list = part1.split(",")
-    dest_list = part2.split(",")
+    move_str = move_str.replace(" ", "").upper()
+    parts = move_str.split(",")
+
+    if len(parts) != 2:
+        raise SomeError("to be implemented soon")
+
+    source_str, dest_str = parts
+
+    source_list = re.findall(r"[A-Z]\d+", source_str)
+    dest_list = re.findall(r"[A-Z]\d+", dest_str)
+
+    if not source_list or not dest_list:
+        raise SomeError("to be implemented soon")
+
     return source_list, dest_list
 
 
@@ -557,6 +566,27 @@ def move_marbles_cmd(marble_coords: list, direction: str) -> bool:
     return True
 
 
+def validate_move_directions(source_list: list, dest_list: list) -> str:
+    """
+    Checks that all coordinate pairs for moving multiple marbles have the same move direction.
+    If they are consistent, the function returns the common move direction.
+    Otherwise, it raises a SomeError.
+
+    :param source_list: a list of source coordinates
+    :param dest_list: A list of destination coordinates
+    :return: The common move direction as a string
+    :raises SomeError: to be implemented soon
+    """
+    if len(source_list) != len(dest_list):
+        raise SomeError("numbers are not matched")
+
+    direction = get_move_direction(source_list[0], dest_list[0])
+    for s, d in zip(source_list[1:], dest_list[1:]):
+        if get_move_direction(s, d) != direction:
+            raise SomeError("move directions are not consistent.")
+    return direction
+
+
 def process_move_command() -> None:
     """
     Processes the user's move command from the input field.
@@ -566,7 +596,13 @@ def process_move_command() -> None:
     """
     move_text = move_entry.get()
     source_list, dest_list = parse_move_input(move_text)
-    direction = get_move_direction(source_list[0], dest_list[0])
+    try:
+        direction = validate_move_directions(source_list, dest_list)
+    except SomeError as e:
+        messagebox.showerror("it doesn't work", str(e))
+        move_entry.delete(0, tk.END)
+        return
+
     if move_marbles_cmd(source_list, direction):
         draw_board(current_board)
     else:
