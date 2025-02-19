@@ -396,10 +396,10 @@ configure_button(undo_button, "#eb6e34")
 configure_button(end_turn_button, "#2196F3")
 configure_button(stop_button, "#FF0000")
 
-# output box UI that displays turn duration, previous move, and suggested next move
+# output box UI that displays last turn duration, previous move, and suggested next move
 output_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
 
-move_duration_label = tk.Label(output_frame, text="Duration of turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+move_duration_label = tk.Label(output_frame, text="Duration of last turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
 move_duration_label.pack(side="top", padx=10, fill="both")
 prev_move_label = tk.Label(output_frame, text="Previous move: [C3, C4, C5], [D3, D4, D5]", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
 prev_move_label.pack(side="top", padx=10, fill="both")
