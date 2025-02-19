@@ -98,15 +98,18 @@ def setup_board_layout(event):
     """
     Sets up the board layout based on the dropdown menu selection at the start page.
     """
-    global current_board
-    print(type(event))
+    global current_board, used_board
     selected_board_layout=board_layout_box.get()
     if selected_board_layout == "Standard":
-        current_board = STANDARD_BOARD_INIT
+        used_board = STANDARD_BOARD_INIT
+        current_board = copy.deepcopy(used_board)
     elif selected_board_layout == "German Daisy":
-        current_board = GERMAN_BOARD_INIT
+        used_board = GERMAN_BOARD_INIT
+        current_board = copy.deepcopy(used_board)
     else:
         current_board = BELGIAN_BOARD_INIT
+        used_board = BELGIAN_BOARD_INIT
+        current_board = copy.deepcopy(used_board)
 
 def setup_game_mode(event):
     """
@@ -216,7 +219,7 @@ def change_theme():
     switch_theme()
 
 def reset_game_state():
-    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board
+    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board
     current_player = "Black"
     move_count = 0
     player_times = {"Black": [], "White": []}
@@ -227,7 +230,7 @@ def reset_game_state():
     timer_label.config(text="Time: 0s")
     update_turn_display()
     canvas.delete("all")
-    current_board = copy.deepcopy(STANDARD_BOARD_INIT)
+    current_board = copy.deepcopy(used_board)
     draw_board(current_board)
 
 def reset_game():
@@ -313,8 +316,8 @@ def undo_move():
 
     :return: None
     """
-    global current_board
-    current_board = copy.deepcopy(STANDARD_BOARD_INIT)
+    global used_board, current_board
+    current_board = copy.deepcopy(used_board)
     draw_board(current_board)
 
 
