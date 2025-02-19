@@ -5,7 +5,7 @@ import time
 import copy
 
 # Constant values for board size and hexagon size
-BOARD_SIZE = 600
+BOARD_SIZE = 500
 HEX_SIZE = 30
 
 # Define themes with background colors and element color schemes
@@ -286,7 +286,9 @@ def start_game():
     start_frame.pack_forget()
     top_frame.pack(fill="x", pady=5)
     mode_frame.pack(fill="x", pady=5)
+    score_frame.pack(side="top")
     canvas.pack()
+    output_frame.pack(side="right", padx=20, pady=(0, 90))
     bottom_frame.pack(fill="x", pady=5)
     draw_board(current_board)
     start_timer()
@@ -343,13 +345,23 @@ timer_label = tk.Label(top_frame, text="Time: 0s", font=("Arial", 12), bg=THEME[
 reset_button = tk.Button(top_frame, text="Reset Game", command=reset_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 theme_button = tk.Button(top_frame, text="Switch Theme", command=switch_theme, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 pause_button = tk.Button(top_frame, text="Pause Game", command=toggle_pause, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+undo_button = tk.Button(top_frame, text="Undo Move", bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+
+# scoreboard UI that displays the remaining marbles for each player
+score_frame = tk.Frame(root, bg=THEME["bg"])
+white_score_label = tk.Label(score_frame, text="White marbles remaining: 14", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
+white_score_label.pack(side="left", padx=(0,260))
+black_score_label = tk.Label(score_frame, text="Black marbles remaining: 14", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
+black_score_label.pack(side="right", padx=(260,0))
+
 
 timer_label.pack(side="left", padx=10)
 reset_button.pack(side="left", padx=10)
 theme_button.pack(side="left", padx=10)
 pause_button.pack(side="left", padx=10)
+undo_button.pack(side="left", padx=10)
 end_turn_button.pack(side="left", padx=10)
 stop_button.pack(side="left", padx=10)
 
@@ -368,8 +380,20 @@ configure_button(exit_button, "#f44336")
 configure_button(reset_button, "#008CBA")
 configure_button(theme_button, "#FF9800")
 configure_button(pause_button, "#9C27B0")
+configure_button(undo_button, "#eb6e34")
 configure_button(end_turn_button, "#2196F3")
 configure_button(stop_button, "#FF0000")
+
+# output box UI that displays turn duration, previous move, and suggested next move
+output_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
+
+move_duration_label = tk.Label(output_frame, text="Duration of turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+move_duration_label.pack(side="top", padx=10, fill="both")
+prev_move_label = tk.Label(output_frame, text="Previous move: [C3, C4, C5], [D3, D4, D5]", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+prev_move_label.pack(side="top", padx=10, fill="both")
+next_move_label = tk.Label(output_frame, text="Next move: [B3, A3], [C3]", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+next_move_label.pack(side="top", padx=10, fill="both")
+
 
 # Adding label to show game mode
 mode_frame = tk.Frame(root, bg=THEME["bg"])
