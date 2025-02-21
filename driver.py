@@ -120,8 +120,17 @@ def setup_game_mode(event):
     current_mode_label.config(text=current_mode)
 
 
-# Function to draw a hexagon (used for board cells)
+
 def draw_hexagon(x, y, size, fill_color, outline_color):
+    """
+    Draws a hexagon (used for board cells)
+
+    :param x: an int representing the x-coordinate of the center of the hexagon
+    :param y: an int representing the y-coordinate of the center of the hexagon
+    :param size: an int representing the diameter of the hexagon
+    :param fill_color: a string of hexadecimal representing the hexagon's fill color
+    :param outline_color: a string of hexadecimal representing the hexagon's outline color
+    """
     angle = 60  # Angle between vertices of the hexagon
     coords = [] # List to hold hexagon vertices
     for i in range(6):
@@ -134,6 +143,7 @@ def draw_hexagon(x, y, size, fill_color, outline_color):
 def draw_marble(x, y, size, fill_color, outline_color):
     """
     Draws a circle with a fill and outline to represent a marble.
+
     :param x: an int representing the x-coordinate of the center of the circle
     :param y: an int representing the y-coordinate of the center of the circle
     :param size: an int representing the diameter of the circle
@@ -143,7 +153,6 @@ def draw_marble(x, y, size, fill_color, outline_color):
     radius = size * 0.9
     canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill_color, outline=outline_color)
 
-# Function to draw the entire game board, iterating through the board dictionary
 def draw_board(board:dict) -> None:
     """
     Draws the game board based on a given board state as a dictionary.
