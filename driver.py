@@ -248,6 +248,8 @@ def reset_game_state():
     global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board
     current_player = "Black"
     move_count = 0
+    move_counts["Black"] = 0
+    move_counts["White"] = 0
     player_times = {"Black": [], "White": []}
     start_time = None
     is_paused = False
