@@ -85,6 +85,8 @@ root.geometry("1000x800")
 # Global variables for tracking the game state
 current_player = "Black"
 move_counts = {"Black": 0, "White": 0}
+white_score = 0
+black_score = 0
 theme_mode = "Light"
 is_paused = False
 player_times = {"Black": [], "White": []}
@@ -111,13 +113,7 @@ def setup_board_layout(event):
         used_board = BELGIAN_BOARD_INIT
         current_board = copy.deepcopy(used_board)
 
-def setup_game_mode(event):
-    """
-     Sets up the game mode based on the dropdown menu selection at the start page.
-    """
-    global current_mode
-    current_mode = game_mode_box.get()
-    current_mode_label.config(text=current_mode)
+
 
 
 
@@ -245,11 +241,13 @@ def reset_game_state():
        Resets the game state variables, including player turns, move count, timers, and board state.
        Refreshes the UI elements and redraws the board.
     """
-    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board
+    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score
     current_player = "Black"
     move_count = 0
     move_counts["Black"] = 0
     move_counts["White"] = 0
+    white_score = 0
+    black_score = 0
     player_times = {"Black": [], "White": []}
     start_time = None
     is_paused = False
@@ -274,8 +272,7 @@ def stop_game():
     """
     reset_game_state()
     top_frame.pack_forget()
-    mode_frame.pack_forget()
-    score_frame.pack_forget()
+    status_frame.pack_forget()
     canvas.pack_forget()
     output_frame.pack_forget()
     log_frame.pack_forget()
@@ -340,8 +337,7 @@ def start_game():
     """
     start_frame.pack_forget()
     top_frame.pack(fill="x", pady=5)
-    mode_frame.pack(fill="x", pady=5)
-    score_frame.pack(side="top")
+    status_frame.pack(fill="x", pady=5)
     canvas.pack()
     output_frame.pack(side="right", padx=20, pady=(0, 90))
     log_frame.pack(anchor="e")
@@ -428,9 +424,6 @@ game_mode_box = ttk.Combobox(start_frame, state = "readonly", values = ["Compute
 game_mode_box.pack(pady=5)
 game_mode_box.set("Computer VS Player")
 
-#Calling setup_game_mode function to change the game mode
-game_mode_box.bind("<<ComboboxSelected>>", setup_game_mode)
-
 start_button = tk.Button(start_frame, text="Start Game", command=start_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
 start_button.pack(pady=10)
 
@@ -438,7 +431,6 @@ exit_button = tk.Button(start_frame, text="Exit", command=exit_game, font=("Aria
 exit_button.pack(pady=10)
 
 top_frame = tk.Frame(root, bg=THEME["bg"])
-timer_label = tk.Label(top_frame, text="Time: 0s", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
 reset_button = tk.Button(top_frame, text="Reset Game", command=reset_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 theme_button = tk.Button(top_frame, text="Switch Theme", command=switch_theme, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 pause_button = tk.Button(top_frame, text="Pause Game", command=toggle_pause, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
@@ -446,16 +438,6 @@ undo_button = tk.Button(top_frame, text="Undo Move", command=undo_move, bg=THEME
 end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 
-
-# Scoreboard UI that displays the remaining marbles for each player # player_scores = {"Black": 0, "White": 0}
-score_frame = tk.Frame(root, bg=THEME["bg"])
-white_score_label = tk.Label(score_frame, text="White marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
-white_score_label.pack(side="left", padx=(0,260))
-black_score_label = tk.Label(score_frame, text="White marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
-black_score_label.pack(side="right", padx=(260,0))
-
-
-timer_label.pack(side="left", padx=10)
 reset_button.pack(side="left", padx=10)
 theme_button.pack(side="left", padx=10)
 pause_button.pack(side="left", padx=10)
@@ -501,9 +483,14 @@ time_history_button = tk.Button(log_frame, text="Turn Duration History", command
 time_history_button.pack(side="left")
 
 # Adding label to show game mode
-mode_frame = tk.Frame(root, bg=THEME["bg"])
-current_mode_label = tk.Label(mode_frame, text=current_mode, font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"], relief="solid", bd=2, padx=10, pady=5)
-current_mode_label.pack(padx=5)
+status_frame = tk.Frame(root, bg=THEME["bg"])
+timer_label = tk.Label(status_frame, text="Time: 0s", font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"])
+white_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {white_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
+white_score_label.pack(side="left", padx=(0,200))
+black_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
+black_score_label.pack(side="right", padx=(200,0))
+
+timer_label.pack(padx=10)
 
 bottom_frame = tk.Frame(root, bg=THEME["bg"])
 turn_label = tk.Label(
@@ -527,6 +514,7 @@ canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
 
 
 def process_move_command():
+    global white_score, black_score
     move_text = move_entry.get()
     try:
         source_list, dest_list = parse_move_input(move_text)
@@ -540,7 +528,14 @@ def process_move_command():
 
         push_success = move_marbles_cmd(current_board, source_list, direction, expected_color, opponent_color)
         if push_success:
-            pass # this code block will be for score increasing. I will be updating later.
+            if expected_color == BLACK_MARBLE: # I implement a code to update the score, but you can delete it if it does not make sense
+                white_score =+ 1
+                white_score_label.config(text=f"White Marbles Lost: {white_score}")
+            else:
+                black_score =+ 1
+                black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+
+            # pass # this code block will be for score increasing. I will be updating later.
         draw_board(current_board)
         end_turn()
     except (MoveError, PushNotAllowedError) as e:
