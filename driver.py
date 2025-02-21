@@ -3,7 +3,7 @@ from tkinter import messagebox, ttk
 import math
 import time
 import copy
-import re
+from moves import (parse_move_input, move_marbles_cmd, validate_move_directions, MoveError, PushNotAllowedError)
 
 # Constant values for board size and hexagon size
 BOARD_SIZE = 500
@@ -436,11 +436,11 @@ end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THE
 stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 
 
-# Scoreboard UI that displays the remaining marbles for each player
+# Scoreboard UI that displays the remaining marbles for each player # player_scores = {"Black": 0, "White": 0}
 score_frame = tk.Frame(root, bg=THEME["bg"])
 white_score_label = tk.Label(score_frame, text="White marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
 white_score_label.pack(side="left", padx=(0,260))
-black_score_label = tk.Label(score_frame, text="Black marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
+black_score_label = tk.Label(score_frame, text="White marbles lost: 0", font=("Arial", 12, "bold"), bg=THEME["bg"], fg=THEME["text"])
 black_score_label.pack(side="right", padx=(260,0))
 
 
@@ -515,199 +515,24 @@ move_counter_label.pack(side="left", padx=10)
 canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
 
 
-class MoveError(Exception):
-    """Base exception for all move-related errors."""
-    pass
-
-class MoveFormatError(MoveError):
-    """Raised when the move command format is incorrect."""
-    pass
-
-class InvalidMarbleError(MoveError):
-    """Raised when trying to move a marble that does not belong to the current player."""
-    pass
-
-class InvalidDirectionError(MoveError):
-    """Raised when the direction of the move is invalid or inconsistent."""
-    pass
-
-class BoardBoundaryError(MoveError):
-    """Raised when the move goes out of board boundaries."""
-    pass
-
-class OverlapError(MoveError):
-    """Raised when marbles would overlap after a move."""
-    pass
-
-
-
-def next_row(row: str) -> str:
-    """
-    Returns the next alphabetical letter for the next row of the game board.
-
-    :param row: a string of the alphabet row
-    :return: a character for the next alphabetical letter
-    """
-    return chr(ord(row) + 1)
-
-
-def prev_row(row: str) -> str:
-    """
-    Returns the previous alphabetical letter for the previous row of the game board.
-
-    :param row: a string of alphabet row
-    :return: a character for the previous alphabetical letter
-    """
-    return chr(ord(row) - 1)
-
-
-def parse_move_input(move_str: str) -> tuple[list, list]:
-    """
-    Parses the move command input into source and destination lists.
-
-    Example: Moving E5 and E6 to F6 and F7 respectively is expressed as e5e6,f5f6
-
-    :param move_str: a string for the moving command following the required format in the example
-    :return: a tuple containing the source list and destination list
-    """
-    move_str = move_str.replace(" ", "").upper()
-    parts = move_str.split(",")
-    if len(parts) != 2:
-        raise MoveFormatError("Invalid move format")
-    source_str, dest_str = parts
-    source_list = re.findall(r"[A-Z]\d+", source_str)
-    dest_list = re.findall(r"[A-Z]\d+", dest_str)
-    if not source_list or not dest_list:
-        raise MoveFormatError("Coordinates are not correct formta")
-    return source_list, dest_list
-
-
-def get_move_direction(source: str, dest: str) -> str:
-    """
-    Determines the move direction based on the source and destination coordinates
-
-    :param source: a string for the starting coordinate (i.e. E5)
-    :param dest: a string for the destination coordinate (i.e. F6)
-    :return: a string specifying the movement direction of the marble
-    :raises Exception: catch-all exception to be updated later
-    """
-    s_row, s_col = source[0], int(source[1:])
-    d_row, d_col = dest[0], int(dest[1:])
-    if next_row(s_row) == d_row and s_col == d_col:
-        return "upper_left"
-    elif next_row(s_row) == d_row and s_col + 1 == d_col:
-        return "upper_right"
-    elif s_row == d_row and s_col - 1 == d_col:
-        return "left"
-    elif s_row == d_row and s_col + 1 == d_col:
-        return "right"
-    elif prev_row(s_row) == d_row and s_col - 1 == d_col:
-        return "down_left"
-    elif prev_row(s_row) == d_row and s_col == d_col:
-        return "down_right"
-    else:
-        raise InvalidDirectionError("Cannot determine move direction.")
-
-
-def transform_coordinate(coord: str, direction: str) -> str:
-    """
-    Transforms a board coordinate in the given direction
-
-    :param coord: starting coordinate
-    :param direction: direction of destination
-    :return: new coordinate after moving
-    :raises Exception: catch-all exception to be updated later
-    """
-    row = coord[0]
-    col = int(coord[1:])
-    if direction == "upper_left":
-        new_row = next_row(row)
-        new_col = col
-    elif direction == "upper_right":
-        new_row = next_row(row)
-        new_col = col + 1
-    elif direction == "left":
-        new_row = row
-        new_col = col - 1
-    elif direction == "right":
-        new_row = row
-        new_col = col + 1
-    elif direction == "down_left":
-        new_row = prev_row(row)
-        new_col = col - 1
-    elif direction == "down_right":
-        new_row = prev_row(row)
-        new_col = col
-    else:
-        raise InvalidDirectionError("Unknown direction")
-
-    new_coord = f"{new_row}{new_col}"
-    if new_coord not in current_board:
-        raise BoardBoundaryError("Out of board boundaries.")
-    return new_coord
-
-
-def move_marbles_cmd(marble_coords: list, direction: str) -> bool:
-    """
-    Moves the marbles on the board in the specified direction.
-
-    :param marble_coords: list of strings for the coordinates of the marble(or marbles)
-    :param direction: a string representing the direction to move
-    :return: True if the move is successful
-    """
-    global current_board
-    player = current_board[marble_coords[0]]
-    new_coords = [transform_coordinate(coord, direction) for coord in marble_coords]
-    for orig, new_coord in zip(marble_coords, new_coords):
-        if new_coord not in marble_coords and current_board.get(new_coord, NO_MARBLE) != NO_MARBLE:
-            raise OverlapError("Marbles cannot overlap!")
-    for coord in marble_coords:
-        current_board[coord] = NO_MARBLE
-    for new_coord in new_coords:
-        current_board[new_coord] = player
-    return True
-
-
-def validate_move_directions(source_list: list, dest_list: list) -> str:
-    """
-    Checks that all coordinate pairs for moving multiple marbles have the same move direction.
-    If they are consistent, the function returns the common move direction.
-    Otherwise, it raises a SomeError.
-
-    :param source_list: a list of source coordinates
-    :param dest_list: A list of destination coordinates
-    :return: The common move direction as a string
-    :raises SomeError: to be implemented soon
-    """
-    if len(source_list) != len(dest_list):
-        raise MoveFormatError("The number of source and destination coordinates do not match")
-    direction = get_move_direction(source_list[0], dest_list[0])
-    for s, d in zip(source_list[1:], dest_list[1:]):
-        if get_move_direction(s, d) != direction:
-            raise InvalidDirectionError("Inconsistent move directions for multiple marbles")
-    return direction
-
-def process_move_command() -> None:
-    """
-    Processes the user's move command from the input field.
-
-    Parses the move, determines the direction, moves the marbles,
-    and redraws the board, combining the previous separate functions
-    """
+def process_move_command():
     move_text = move_entry.get()
     try:
         source_list, dest_list = parse_move_input(move_text)
         expected_color = BLACK_MARBLE if current_player == "Black" else WHITE_MARBLE
+        opponent_color = WHITE_MARBLE if current_player == "Black" else BLACK_MARBLE
         for coord in source_list:
             if current_board.get(coord) != expected_color:
-                raise InvalidMarbleError("Move your own marbles!")
+                raise MoveError("Move your own marbles!")
+
         direction = validate_move_directions(source_list, dest_list)
-        if move_marbles_cmd(source_list, direction):
-            draw_board(current_board)
-            end_turn()
-        else:
-            raise MoveError("Marble move failed.")
-    except MoveError as e:
+
+        push_success = move_marbles_cmd(current_board, source_list, direction, expected_color, opponent_color)
+        if push_success:
+            pass # this code block will be for score increasing. I will be updating later.
+        draw_board(current_board)
+        end_turn()
+    except (MoveError, PushNotAllowedError) as e:
         messagebox.showerror("Invalid Move", str(e))
     finally:
         move_entry.delete(0, tk.END)
