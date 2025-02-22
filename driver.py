@@ -4,6 +4,8 @@ import math
 import time
 import copy
 from moves import (parse_move_input, move_marbles_cmd, validate_move_directions, MoveError, PushNotAllowedError)
+from part_2 import export_current_board_to_text
+
 
 # Constant values for board size and hexagon size
 BOARD_SIZE = 500
@@ -396,6 +398,45 @@ def display_turn_duration_log():
     time_duration_label = (tk.Label(time_window, text="Turn duration log displayed here"))
     time_duration_label.pack()
 
+def process_move_command():
+    global white_score, black_score
+    move_text = move_entry.get().strip()
+
+    if move_text.lower() == "save board":
+        try:
+            export_current_board_to_text(current_board, current_player, "current_board.txt")
+            messagebox.showinfo("Save Board", "Board has been saved to current_board.txt")
+        except MoveError as e:
+            messagebox.showerror("board saving error", str(e))
+        finally:
+            move_entry.delete(0, tk.END)
+        return
+
+    try:
+        source_list, dest_list = parse_move_input(move_text)
+        expected_color = BLACK_MARBLE if current_player == "Black" else WHITE_MARBLE
+        opponent_color = WHITE_MARBLE if current_player == "Black" else BLACK_MARBLE
+        for coord in source_list:
+            if current_board.get(coord) != expected_color:
+                raise MoveError("Move your own marbles!")
+
+        direction = validate_move_directions(source_list, dest_list)
+
+        push_success = move_marbles_cmd(current_board, source_list, direction, expected_color, opponent_color)
+        if push_success:
+            if expected_color == BLACK_MARBLE:
+                white_score =+ 1
+                white_score_label.config(text=f"White Marbles Lost: {white_score}")
+            else:
+                black_score =+ 1
+                black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+        draw_board(current_board)
+        end_turn()
+    except (MoveError, PushNotAllowedError) as e:
+        messagebox.showerror("Invalid Move", str(e))
+    finally:
+        move_entry.delete(0, tk.END)
+
 
 start_frame = tk.Frame(root, bg=THEME["bg"])
 start_frame.pack(pady=100)
@@ -513,39 +554,8 @@ move_counter_label.pack(side="left", padx=10)
 canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
 
 
-def process_move_command():
-    global white_score, black_score
-    move_text = move_entry.get()
-    try:
-        source_list, dest_list = parse_move_input(move_text)
-        expected_color = BLACK_MARBLE if current_player == "Black" else WHITE_MARBLE
-        opponent_color = WHITE_MARBLE if current_player == "Black" else BLACK_MARBLE
-        for coord in source_list:
-            if current_board.get(coord) != expected_color:
-                raise MoveError("Move your own marbles!")
-
-        direction = validate_move_directions(source_list, dest_list)
-
-        push_success = move_marbles_cmd(current_board, source_list, direction, expected_color, opponent_color)
-        if push_success:
-            if expected_color == BLACK_MARBLE: # I implement a code to update the score, but you can delete it if it does not make sense
-                white_score =+ 1
-                white_score_label.config(text=f"White Marbles Lost: {white_score}")
-            else:
-                black_score =+ 1
-                black_score_label.config(text=f"Black Marbles Lost: {black_score}")
-
-            # pass # this code block will be for score increasing. I will be updating later.
-        draw_board(current_board)
-        end_turn()
-    except (MoveError, PushNotAllowedError) as e:
-        messagebox.showerror("Invalid Move", str(e))
-    finally:
-        move_entry.delete(0, tk.END)
-
-
 command_frame = tk.Frame(root, bg=THEME["bg"])
-move_label = tk.Label(command_frame, text="Enter your move:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
+move_label = tk.Label(command_frame, text="Enter your Command:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
 move_label.pack(pady=5)
 entry_frame = tk.Frame(command_frame, bg=THEME["bg"])
 entry_frame.pack(pady=3)

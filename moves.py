@@ -182,7 +182,6 @@ def move_marbles_cmd(board: dict, marble_coords: list[str], direction: str,
     except BoardBoundaryError:
         next_cell = None
 
-    # If next cell is empty or off board, perform a normal move.
     if next_cell is None or board.get(next_cell, "Blank") == "Blank":
         new_coords = [transform_coordinate(coord, direction, board) for coord in marble_coords]
         for orig, new_coord in zip(marble_coords, new_coords):
