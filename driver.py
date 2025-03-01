@@ -8,7 +8,7 @@ from part_2 import export_current_board_to_text
 
 
 # Constant values for board size and hexagon size
-BOARD_SIZE = 500
+BOARD_SIZE = 550
 HEX_SIZE = 30
 
 # Define themes with background colors and element color schemes
@@ -257,7 +257,7 @@ def reset_game_state():
     move_counts["White"] = 0
     white_score = 0
     black_score = 0
-    player_times = {"Black": [], "White": []}
+    player_times = {"Player 1": [], "Player 2": []}
     start_time = None
     is_paused = False
     pause_time = None
@@ -312,14 +312,18 @@ def start_timer():
     """
     Starts or updates the game timer. Ends turn if time limit is exceeded.
     """
-    global start_time, is_paused
+    global start_time, is_paused, total_game_time
 
     if not is_paused:
         if start_time is None:
-            start_time = time.time()
+            start_time = time.time()  # Start the timer for the current move
 
+        # Calculate total game time
+        total_game_time = time.time() - game_start_time  # Total time since game started
+        timer_label.config(text=f"Time: {int(total_game_time)}s")  # Update the top timer
+
+        # Calculate elapsed time for the current move
         elapsed_time = time.time() - start_time
-        timer_label.config(text=f"Time: {int(elapsed_time)}s")
 
         # If time limit is exceeded (excluding "∞"), automatically end the turn
         if elapsed_time >= move_time_limit != float("inf"):
@@ -332,7 +336,7 @@ def start_timer():
 
 
 def end_turn():
-    global current_player, start_time, is_paused, pause_time
+    global current_player, start_time, is_paused, pause_time, game_start_time
 
     total_moves_played = move_counts["Black"] + move_counts["White"]
 
@@ -345,8 +349,11 @@ def end_turn():
         return
 
     if start_time is not None:
-        elapsed_time = time.time() - start_time
-        player_times[current_player].append(elapsed_time)
+        # Calculate the duration of the current move
+        move_duration = time.time() - start_time
+        # Update the time history with the move duration
+        display_turn_duration_log(current_player, move_duration)
+        # Reset the start time for the next player
         start_time = None
 
     # Increment move count and switch turns
@@ -361,9 +368,8 @@ def end_turn():
 
 
 
-
 def start_game():
-    global max_moves, move_time_limit
+    global max_moves, move_time_limit, game_start_time
 
     try:
         max_moves = int(max_moves_entry.get())  # Get move limit
@@ -381,8 +387,11 @@ def start_game():
             if move_time_limit <= 0:
                 raise ValueError
         except ValueError:
-            messagebox.showerror("Invalid Input", "Please enter a valid number or 'i' for unlimited time.")
+            messagebox.showerror("Invalid Input", "Please enter a valid number or '∞' for unlimited time.")
             return
+
+    # Initialize game start time
+    game_start_time = time.time()
 
     start_frame.pack_forget()  # Hide landing page
     top_frame.pack(fill="x", pady=5)
@@ -423,28 +432,19 @@ def undo_move():
     draw_board(current_board)
 
 
-def display_ai_move_log():
+def display_ai_move_log(move):
     """
-    Displays the complete log history for AI suggested moves.
+    Updates the move history display with the latest move.
     """
-    move_window = tk.Toplevel()
-    move_window.title("AI Move History Log")
-    move_window.geometry("400x300")
+    move_history_text.insert(tk.END, f"{move}\n")  # Append the move to the Text widget
+    move_history_text.see(tk.END)  # Scroll to the bottom
 
-    ai_move_label = (tk.Label(move_window, text="AI move log displayed here"))
-    ai_move_label.pack()
-
-
-def display_turn_duration_log():
+def display_turn_duration_log(player, duration):
     """
-    Displays the complete log history for turn durations, including total aggregate time.
+    Updates the time history display with the time taken by the player for their move.
     """
-    time_window = tk.Toplevel()
-    time_window.title("Turn Duration History Log")
-    time_window.geometry("400x300")
-
-    time_duration_label = (tk.Label(time_window, text="Turn duration log displayed here"))
-    time_duration_label.pack()
+    time_history_text.insert(tk.END, f"{player}: {duration:.2f} sec\n")  # Append the move duration
+    time_history_text.see(tk.END)  # Scroll to the bottom
 
 def process_move_command():
     global white_score, black_score
@@ -478,6 +478,9 @@ def process_move_command():
             else:
                 black_score =+ 1
                 black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+
+        move = move_entry.get().strip()  # Get the move from the input
+        display_ai_move_log(move)  # Update the move history
         draw_board(current_board)
         end_turn()
     except (MoveError, PushNotAllowedError) as e:
@@ -582,10 +585,41 @@ next_move_label.pack(side="top", padx=10, fill="both")
 # Log button UI that includes two buttons to display turn duration and AI move history logs
 log_frame = tk.Frame(root, bg=THEME["bg"])
 
-move_history_button = tk.Button(log_frame, text="AI Move History", command=display_ai_move_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-move_history_button.pack(side="left", padx=(0,10))
-time_history_button = tk.Button(log_frame, text="Turn Duration History", command=display_turn_duration_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-time_history_button.pack(side="left")
+
+
+
+# Frame for Move History (Left Side)
+move_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
+move_history_frame.pack(side="left", fill="y", padx=10, pady=10)
+
+# Label for Move History
+move_history_label = tk.Label(move_history_frame, text="Move History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
+move_history_label.pack(pady=5)
+
+# Text Widget to Display Move History
+move_history_text = tk.Text(move_history_frame, wrap=tk.WORD, width=30, height=30, bg=THEME["bg"], fg=THEME["text"])
+move_history_text.pack(fill="both", expand=True)
+
+# Frame for Time History (Right Side)
+time_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
+time_history_frame.pack(side="right", fill="y", padx=10, pady=10)
+
+# Label for Time History
+time_history_label = tk.Label(time_history_frame, text="Time History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
+time_history_label.pack(pady=5)
+
+# Text Widget to Display Time History
+time_history_text = tk.Text(time_history_frame, wrap=tk.WORD, width=30, height=30, bg=THEME["bg"], fg=THEME["text"])
+time_history_text.pack(fill="both", expand=True)
+
+
+
+
+
+# move_history_button = tk.Button(log_frame, text="AI Move History", command=display_ai_move_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+# move_history_button.pack(side="left", padx=(0,10))
+# time_history_button = tk.Button(log_frame, text="Turn Duration History", command=display_turn_duration_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+# time_history_button.pack(side="left")
 
 # Adding label to show game mode
 status_frame = tk.Frame(root, bg=THEME["bg"])
