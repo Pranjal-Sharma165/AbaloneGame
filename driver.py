@@ -12,12 +12,20 @@ BOARD_SIZE = 500
 HEX_SIZE = 30
 
 # Define themes with background colors and element color schemes
-THEME_LIGHT = {"bg": "#D3D3D3", "hex_bg": "#E0E0E0", "hex_outline": "#000000", "text": "#000000", "btn_bg": "#B0B0B0", "btn_fg": "#000000"}
-THEME_DARK = {"bg": "#2E2E2E", "hex_bg": "#444444", "hex_outline": "#FFFFFF", "text": "#FFFFFF", "btn_bg": "#555555", "btn_fg": "#FFFFFF"}
-THEME_BLUE = {"bg": "#A0C2FF", "hex_bg": "#80B3FF", "hex_outline": "#1E90FF", "text": "#000000", "btn_bg": "#A1C8E0", "btn_fg": "#000000"}
-THEME_GREEN = {"bg": "#CCE6CC", "hex_bg": "#80E680", "hex_outline": "#32CD32", "text": "#000000", "btn_bg": "#80D68B", "btn_fg": "#000000"}
-THEME_PURPLE = {"bg": "#D6B7D6", "hex_bg": "#C29AC7", "hex_outline": "#800080", "text": "#000000", "btn_bg": "#D29BE3", "btn_fg": "#000000"}
-THEME_BROWN = {"bg": "#D2B48C", "hex_bg": "#C19A6B", "hex_outline": "#8B5A2B", "text": "#000000", "btn_bg": "#A67B5B", "btn_fg": "#000000"}
+THEME_LIGHT = {
+    "bg": "#4e5f7a",          # Background color
+    "hex_bg": "#3b3c3c",      # Hexagon fill color
+    "hex_outline": "#000000", # Hexagon outline color
+    "text": "#000000",        # Text color
+    "btn_bg": "#B0B0B0",      # Button background color
+    "btn_fg": "#000000",      # Button text color
+    "white_marble": "#FFFFFF" # Specific color for white marble
+}
+THEME_DARK = {"bg": "#4e5f7a","hex_bg": "#3b3c3c","hex_outline": "#FFFFFF","text": "#FFFFFF","btn_bg": "#555555","btn_fg": "#FFFFFF","white_marble": "#000000"}
+THEME_BLUE = {"bg": "#4e5f7a","hex_bg": "#3b3c3c","hex_outline": "#0F52BA","text": "#0096FF","btn_bg": "#A1C8E0","btn_fg": "#000000","white_marble": "#89CFF0"}
+THEME_GREEN = {"bg": "#4e5f7a", "hex_bg": "#3b3c3c", "hex_outline": "#50C878", "text": "#228B22", "btn_bg": "#80D68B", "btn_fg": "#000000", "white_marble": "#AFE1AF"}
+THEME_PURPLE = {"bg": "#4e5f7a", "hex_bg": "#3b3c3c", "hex_outline": "#800080", "text": "#E6E6FA", "btn_bg": "#D29BE3", "btn_fg": "#000000", "white_marble": "#CBC3E3"}
+THEME_BROWN = {"bg": "#4e5f7a", "hex_bg": "#3b3c3c", "hex_outline": "#5C4033", "text": "#C2B280", "btn_bg": "#A67B5B", "btn_fg": "#000000", "white_marble": "#C19A6B"}
 
 # Default theme selected (can be changed dynamically)
 THEME = THEME_LIGHT
@@ -94,6 +102,9 @@ is_paused = False
 player_times = {"Black": [], "White": []}
 start_time = None
 pause_time = None
+max_moves = 20  # Default value
+move_time_limit = float("inf")  # Default: No time limit
+
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -114,10 +125,6 @@ def setup_board_layout(event):
         current_board = BELGIAN_BOARD_INIT
         used_board = BELGIAN_BOARD_INIT
         current_board = copy.deepcopy(used_board)
-
-
-
-
 
 def draw_hexagon(x, y, size, fill_color, outline_color):
     """
@@ -180,10 +187,10 @@ def draw_board(board:dict) -> None:
             cell_value = board[cell_key]
             if cell_value == BLACK_MARBLE:
                 draw_marble(x, y, HEX_SIZE, THEME["hex_outline"], "#000000")  # Black marble
-                text_color = "#e65252"  # White text for visibility
+                text_color = "#D14B3A"  # White text for visibility
             elif cell_value == WHITE_MARBLE:
-                draw_marble(x, y, HEX_SIZE, THEME["hex_bg"], "#000000")  # White marble
-                text_color = "#1e1b26"  # Black text for visibility
+                draw_marble(x, y, HEX_SIZE, THEME["white_marble"], "#000000")  # White marble
+                text_color = "#D14B3A"  # Black text for visibility
             else:
                 text_color = THEME["text"]  # Default theme text color for empty spaces
 
@@ -303,29 +310,49 @@ def toggle_pause():
 
 def start_timer():
     """
-        Starts or updates the game timer if the game is not paused.
+    Starts or updates the game timer. Ends turn if time limit is exceeded.
     """
-    global start_time
+    global start_time, is_paused
+
     if not is_paused:
         if start_time is None:
             start_time = time.time()
+
         elapsed_time = time.time() - start_time
         timer_label.config(text=f"Time: {int(elapsed_time)}s")
-    root.after(1000, start_timer)
+
+        # If time limit is exceeded (excluding "∞"), automatically end the turn
+        if elapsed_time >= move_time_limit != float("inf"):
+            messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
+            end_turn()
+            return  # Stop updating timer after turn ends
+
+    root.after(1000, start_timer)  # Call again after 1 second
+
 
 
 def end_turn():
-    """
-        Ends the current player's turn, updates the move count, and switches the player.
-        Also manages timing for each player's turns.
-    """
-    global current_player, move_count, start_time, is_paused, pause_time
+    global current_player, start_time, is_paused, pause_time
+
+    total_moves_played = move_counts["Black"] + move_counts["White"]
+
+    # Ensure the last move is counted before ending the game
+    if total_moves_played >= (2 * max_moves) - 1:
+        move_counts[current_player] += 1  # Final move before ending the game
+        move_counter_label.config(text=f"Moves: {move_counts}")
+        messagebox.showinfo("Game Over", "Both players have reached their move limit! Game Over.")
+        stop_game()
+        return
+
     if start_time is not None:
         elapsed_time = time.time() - start_time
         player_times[current_player].append(elapsed_time)
         start_time = None
+
+    # Increment move count and switch turns
     move_counts[current_player] += 1
     move_counter_label.config(text=f"Moves: {move_counts}")
+
     current_player = "White" if current_player == "Black" else "Black"
     is_paused = False
     pause_time = None
@@ -333,11 +360,31 @@ def end_turn():
     start_timer()
 
 
+
+
 def start_game():
-    """
-        Initializes and starts the game by displaying all UI elements and starting the timer.
-    """
-    start_frame.pack_forget()
+    global max_moves, move_time_limit
+
+    try:
+        max_moves = int(max_moves_entry.get())  # Get move limit
+    except ValueError:
+        messagebox.showerror("Invalid Input", "Please enter a valid number for max moves.")
+        return
+
+    # Get time limit and allow "∞" as an option
+    time_limit_text = time_limit_entry.get().strip()
+    if time_limit_text == "i":
+        move_time_limit = float("inf")
+    else:
+        try:
+            move_time_limit = float(time_limit_text)
+            if move_time_limit <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid number or 'i' for unlimited time.")
+            return
+
+    start_frame.pack_forget()  # Hide landing page
     top_frame.pack(fill="x", pady=5)
     status_frame.pack(fill="x", pady=5)
     canvas.pack()
@@ -347,6 +394,7 @@ def start_game():
     draw_board(current_board)
     start_timer()
     command_frame.pack(side="bottom", fill="x", pady=10)
+
 
 
 def exit_game():
@@ -464,6 +512,22 @@ game_mode_label.pack(pady=10)
 game_mode_box = ttk.Combobox(start_frame, state = "readonly", values = ["Computer VS Player", "Player VS Player", "Computer VS Computer"])
 game_mode_box.pack(pady=5)
 game_mode_box.set("Computer VS Player")
+
+# Creating label and entry for max moves allowed
+max_moves_label = tk.Label(start_frame, text="Max Moves Per Player:", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
+max_moves_label.pack(pady=10)
+
+max_moves_entry = tk.Entry(start_frame, font=("Arial", 12))
+max_moves_entry.pack(pady=5)
+max_moves_entry.insert(0, "20")  # Default value
+
+# Creating label and entry for time limit per move
+time_limit_label = tk.Label(start_frame, text="Time Limit Per Move (seconds)(i for ∞):", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
+time_limit_label.pack(pady=10)
+
+time_limit_entry = tk.Entry(start_frame, font=("Arial", 12))
+time_limit_entry.pack(pady=5)
+time_limit_entry.insert(0, "i")  # Default to infinity
 
 start_button = tk.Button(start_frame, text="Start Game", command=start_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
 start_button.pack(pady=10)
