@@ -289,6 +289,8 @@ def stop_game():
     log_frame.pack_forget()
     bottom_frame.pack_forget()
     command_frame.pack_forget()
+    move_history_frame.place_forget()
+    time_history_frame.place_forget()
     start_frame.pack(pady=100)
 
 def toggle_pause():
@@ -399,6 +401,8 @@ def start_game():
     top_frame.pack(fill="x", pady=5)
     status_frame.pack(fill="x", pady=5)
     canvas.pack()
+    move_history_frame.place(relheight=0.5, x=10, y=115)
+    time_history_frame.place(relheight=0.509, relx=0.995, anchor="e", y=365)
     output_frame.pack(side="right", padx=20, pady=(0, 90))
     log_frame.pack(anchor="e")
     bottom_frame.pack(fill="x", pady=5)
@@ -614,7 +618,8 @@ log_frame = tk.Frame(root, bg=THEME["bg"])
 
 # Frame for Move History (Left Side)
 move_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
-move_history_frame.pack(side="left", fill="y", padx=10, pady=10)
+# move_history_frame.place(relheight=0.5, x=10, y=115)
+# move_history_frame.pack(side="left", fill="y", padx=10, pady=10)
 
 # Label for Move History
 move_history_label = tk.Label(move_history_frame, text="Move History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
@@ -626,7 +631,8 @@ move_history_text.pack(fill="both", expand=True)
 
 # Frame for Time History (Right Side)
 time_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
-time_history_frame.pack(side="right", fill="y", padx=10, pady=10)
+# time_history_frame.place(relheight=0.509, relx=0.995, anchor="e", y=365)
+# time_history_frame.pack(side="right", fill="y", padx=10, pady=10)
 
 # Label for Time History
 time_history_label = tk.Label(time_history_frame, text="Time History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
