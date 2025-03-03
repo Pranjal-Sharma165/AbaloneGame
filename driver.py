@@ -3,8 +3,10 @@ from tkinter import messagebox, ttk
 import math
 import time
 import copy
+import os
+from next_moves_generator import generate_and_save_all_next_moves
 from moves import (parse_move_input, move_marbles_cmd, validate_move_directions, MoveError, PushNotAllowedError)
-from part_2 import export_current_board_to_text
+from board_io import export_current_board_to_text
 
 
 # Constant values for board size and hexagon size
@@ -446,18 +448,42 @@ def display_turn_duration_log(player, duration):
     time_history_text.insert(tk.END, f"{player}: {duration:.2f} sec\n")  # Append the move duration
     time_history_text.see(tk.END)  # Scroll to the bottom
 
+def process_generate_all_next_moves():
+    """
+    Generates legal next-ply moves and saves two files:
+    """
+    global current_board, current_player, move_counts
+
+    current_color = BLACK_MARBLE if current_player == "Black" else WHITE_MARBLE
+    turn_number = move_counts[current_player]
+    output_dir = "./output"
+
+    moves_filename = os.path.join(output_dir, f"moves_turn{move_counts["White"] + move_counts["Black"]}.txt")
+    boards_filename = os.path.join(output_dir, f"boards_turn{move_counts["White"] + move_counts["Black"]}.txt")
+
+    moves = generate_and_save_all_next_moves(current_board, current_color, current_player,
+                                              moves_filename, boards_filename)
+    messagebox.showinfo("Next Moves", f"Generated {len(moves)} moves.\n"
+                                      f"Move notations saved.\n"
+                                      f"Board configurations saved.")
+
 def process_move_command():
+    """
+    Handles commands for the text box while playing game.
+    """
     global white_score, black_score
     move_text = move_entry.get().strip()
 
     if move_text.lower() == "save board":
-        try:
-            export_current_board_to_text(current_board, current_player, "current_board.txt")
-            messagebox.showinfo("Save Board", "Board has been saved to current_board.txt")
-        except MoveError as e:
-            messagebox.showerror("board saving error", str(e))
-        finally:
-            move_entry.delete(0, tk.END)
+        export_current_board_to_text(current_board, current_player,
+                                     f"./output/turn_{move_counts["White"] + move_counts["Black"]}.txt")
+        messagebox.showinfo("Save Board", "Board has been saved.")
+        move_entry.delete(0, tk.END)
+        return
+
+    elif move_text.lower() == "next move":
+        process_generate_all_next_moves()
+        move_entry.delete(0, tk.END)
         return
 
     try:
@@ -478,15 +504,13 @@ def process_move_command():
             else:
                 black_score =+ 1
                 black_score_label.config(text=f"Black Marbles Lost: {black_score}")
-
-        move = move_entry.get().strip()  # Get the move from the input
-        display_ai_move_log(move)  # Update the move history
         draw_board(current_board)
         end_turn()
     except (MoveError, PushNotAllowedError) as e:
         messagebox.showerror("Invalid Move", str(e))
     finally:
         move_entry.delete(0, tk.END)
+
 
 
 start_frame = tk.Frame(root, bg=THEME["bg"])
