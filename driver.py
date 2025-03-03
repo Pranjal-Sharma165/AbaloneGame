@@ -567,14 +567,14 @@ reset_button = tk.Button(top_frame, text="Reset Game", command=reset_game, bg=TH
 theme_button = tk.Button(top_frame, text="Switch Theme", command=switch_theme, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 pause_button = tk.Button(top_frame, text="Pause Game", command=toggle_pause, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 undo_button = tk.Button(top_frame, text="Undo Move", command=undo_move, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+# end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
 
 reset_button.pack(side="left", padx=10)
 theme_button.pack(side="left", padx=10)
 pause_button.pack(side="left", padx=10)
 undo_button.pack(side="left", padx=10)
-end_turn_button.pack(side="left", padx=10)
+# end_turn_button.pack(side="left", padx=10)
 stop_button.pack(side="left", padx=10)
 
 theme_label = tk.Label(top_frame, text="Choose Theme", font=("Arial", 12))
@@ -593,7 +593,7 @@ configure_button(reset_button, "#008CBA")
 configure_button(theme_button, "#FF9800")
 configure_button(pause_button, "#9C27B0")
 configure_button(undo_button, "#eb6e34")
-configure_button(end_turn_button, "#2196F3")
+# configure_button(end_turn_button, "#2196F3")
 configure_button(stop_button, "#FF0000")
 
 # Output box UI that displays last turn duration, previous move, and suggested next move
@@ -686,7 +686,7 @@ move_entry.pack(side="left", padx=5)
 
 move_entry.bind("<Return>", lambda event: process_move_command())
 
-move_button = tk.Button(entry_frame, text="Move", command=process_move_command, font=("Arial", 12), bg=THEME["btn_bg"], fg=THEME["btn_fg"])
-move_button.pack(side="left", padx=5)
+# move_button = tk.Button(entry_frame, text="Move", command=process_move_command, font=("Arial", 12), bg=THEME["btn_bg"], fg=THEME["btn_fg"])
+# move_button.pack(side="left", padx=5)
 
 root.mainloop()
