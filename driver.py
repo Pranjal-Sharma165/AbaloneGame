@@ -27,7 +27,7 @@ THEME_DARK = {"bg": "#4e5f7a","hex_bg": "#3b3c3c","hex_outline": "#FFFFFF","text
 THEME_BLUE = {"bg": "#4e5f7a","hex_bg": "#3b3c3c","hex_outline": "#0F52BA","text": "#0096FF","btn_bg": "#A1C8E0","btn_fg": "#000000","white_marble": "#89CFF0"}
 THEME_GREEN = {"bg": "#4e5f7a", "hex_bg": "#3b3c3c", "hex_outline": "#50C878", "text": "#228B22", "btn_bg": "#80D68B", "btn_fg": "#000000", "white_marble": "#AFE1AF"}
 THEME_PURPLE = {"bg": "#4e5f7a", "hex_bg": "#3b3c3c", "hex_outline": "#800080", "text": "#E6E6FA", "btn_bg": "#D29BE3", "btn_fg": "#000000", "white_marble": "#CBC3E3"}
-THEME_BROWN = {"bg": "#4e5f7a", "hex_bg": "#3b3c3c", "hex_outline": "#5C4033", "text": "#C2B280", "btn_bg": "#A67B5B", "btn_fg": "#000000", "white_marble": "#C19A6B"}
+THEME_BROWN = {"bg": "#4e5f7a", "hex_bg": "#3b3c3c", "hex_outline": "#5C4033", "text": "#C2B280", "btn_bg": "#A67B5B", "btn_fg": "#000000", "white_marble": "#e4d4c8"}
 
 # Default theme selected (can be changed dynamically)
 THEME = THEME_LIGHT
@@ -106,7 +106,7 @@ start_time = None
 pause_time = None
 max_moves = 20  # Default value
 move_time_limit = float("inf")  # Default: No time limit
-
+total_pause_duration = 0  # Tracks the total time the game has been paused
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -248,11 +248,8 @@ def change_theme():
     switch_theme()
 
 def reset_game_state():
-    """
-       Resets the game state variables, including player turns, move count, timers, and board state.
-       Refreshes the UI elements and redraws the board.
-    """
-    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score
+    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration
+
     current_player = "Black"
     move_count = 0
     move_counts["Black"] = 0
@@ -263,6 +260,7 @@ def reset_game_state():
     start_time = None
     is_paused = False
     pause_time = None
+    total_pause_duration = 0  # Reset the total pause duration
     move_counter_label.config(text=f"Moves: {move_count}")
     timer_label.config(text="Time: 0s")
     update_turn_display()
@@ -279,88 +277,109 @@ def reset_game():
 
 def stop_game():
     """
-       Stops the game, resets the state, and hides game elements to return to the start screen.
+    Stops the game, resets the state, and hides game elements to return to the start screen.
     """
     reset_game_state()
+
+    # Hide all game-related frames
     top_frame.pack_forget()
     status_frame.pack_forget()
     canvas.pack_forget()
     output_frame.pack_forget()
-    # log_frame.pack_forget()
     bottom_frame.pack_forget()
     command_frame.pack_forget()
-    move_history_frame.place_forget()
-    time_history_frame.place_forget()
+    move_history_frame.place_forget()  # Hide the move history frame
+    time_history_frame.place_forget()  # Hide the time history frame
+
+    # Show the landing page
     start_frame.pack(pady=100)
 
+
 def toggle_pause():
-    """
-        Toggles the pause state of the game. Updates button appearance and game timer accordingly.
-    """
-    global is_paused, pause_time, start_time
+    global is_paused, pause_time, start_time, total_pause_duration
+
     if is_paused:
         is_paused = False
         configure_button(pause_button, THEME["btn_bg"], THEME["btn_fg"])
         pause_button.config(text="Pause Game")
+
         if pause_time is not None:
-            start_time += time.time() - pause_time
-            pause_time = None
+            pause_duration = time.time() - pause_time
+            total_pause_duration += pause_duration  # Accumulate pause duration
+            print(
+                f"DEBUG: Resuming game. Pause duration added: {pause_duration:.4f}s, Total pause: {total_pause_duration:.4f}s")
+
+            # Adjust start_time to maintain correct move timing
+            start_time += pause_duration
+
+        pause_time = None
+
+        # Re-enable UI elements
+        move_entry.config(state=tk.NORMAL)
+        undo_button.config(state=tk.NORMAL)
     else:
         is_paused = True
         configure_button(pause_button, "#FF6347", "white")
         pause_button.config(text="Resume Game")
-        pause_time = time.time()
+        pause_time = time.time()  # Record pause time
+        print(f"DEBUG: Game paused at {pause_time:.4f}")
+
+        # Disable UI elements
+        move_entry.config(state=tk.DISABLED)
+        undo_button.config(state=tk.DISABLED)
 
 
 def start_timer():
-    """
-    Starts or updates the game timer. Ends turn if time limit is exceeded.
-    """
-    global start_time, is_paused, total_game_time
+    global start_time, total_game_time, total_pause_duration
 
-    if not is_paused:
-        if start_time is None:
-            start_time = time.time()  # Start the timer for the current move
+    if is_paused:
+        return  # Stop updating timer while paused
 
-        # Calculate total game time
-        total_game_time = time.time() - game_start_time  # Total time since game started
-        timer_label.config(text=f"Time: {int(total_game_time)}s")  # Update the top timer
+    if start_time is None:
+        start_time = time.time()  # Start the timer only if it hasn't started
+        print(f"DEBUG: New move started at {start_time:.4f}")
 
-        # Calculate elapsed time for the current move
-        elapsed_time = time.time() - start_time
+    # Correct game time calculation: Only subtract total pause duration once
+    total_game_time = time.time() - game_start_time - total_pause_duration
+    timer_label.config(text=f"Time: {int(total_game_time)}s")
 
-        # If time limit is exceeded (excluding "∞"), automatically end the turn
-        if elapsed_time >= move_time_limit != float("inf"):
-            messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
-            end_turn()
-            return  # Stop updating timer after turn ends
+    # Correct elapsed move time calculation
+    elapsed_time = time.time() - start_time
+
+    print(f"DEBUG: Move duration = {elapsed_time:.4f}, start_time = {start_time:.4f}, total_pause_duration = {total_pause_duration:.4f}")
+
+    if move_time_limit != float("inf") and elapsed_time >= move_time_limit:
+        messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
+        end_turn()
+        return  # Stop updating timer after turn ends
 
     root.after(1000, start_timer)  # Call again after 1 second
 
-
-
 def end_turn():
-    global current_player, start_time, is_paused, pause_time, game_start_time
+    global current_player, start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time
 
     total_moves_played = move_counts["Black"] + move_counts["White"]
 
-    # Ensure the last move is counted before ending the game
     if total_moves_played >= (2 * max_moves) - 1:
-        move_counts[current_player] += 1  # Final move before ending the game
+        move_counts[current_player] += 1
         move_counter_label.config(text=f"Moves: {move_counts}")
         messagebox.showinfo("Game Over", "Both players have reached their move limit! Game Over.")
         stop_game()
         return
 
     if start_time is not None:
-        # Calculate the duration of the current move
         move_duration = time.time() - start_time
-        # Update the time history with the move duration
-        display_turn_duration_log(current_player, move_duration)
-        # Reset the start time for the next player
-        start_time = None
+        print(f"DEBUG: Move duration = {move_duration:.4f}, start_time = {start_time:.4f}, total_pause_duration = {total_pause_duration:.4f}")
 
-    # Increment move count and switch turns
+        total_game_time = time.time() - game_start_time - total_pause_duration
+        print(f"DEBUG: Updated total_game_time = {total_game_time:.4f}")
+
+        display_turn_duration_log(current_player, move_duration)
+
+        # Reset `start_time` for next move
+        start_time = time.time()
+        print(f"DEBUG: Reset start_time = {start_time:.4f}")
+
     move_counts[current_player] += 1
     move_counter_label.config(text=f"Moves: {move_counts}")
 
@@ -371,45 +390,29 @@ def end_turn():
     start_timer()
 
 
-
 def start_game():
-    global max_moves, move_time_limit, game_start_time
+    global game_start_time, total_pause_duration, is_paused, start_time
 
-    try:
-        max_moves = int(max_moves_entry.get())  # Get move limit
-    except ValueError:
-        messagebox.showerror("Invalid Input", "Please enter a valid number for max moves.")
-        return
-
-    # Get time limit and allow "∞" as an option
-    time_limit_text = time_limit_entry.get().strip()
-    if time_limit_text == "i":
-        move_time_limit = float("inf")
-    else:
-        try:
-            move_time_limit = float(time_limit_text)
-            if move_time_limit <= 0:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Invalid Input", "Please enter a valid number or '∞' for unlimited time.")
-            return
-
-    # Initialize game start time
     game_start_time = time.time()
+    total_pause_duration = 0
+    is_paused = False
+    start_time = time.time()
 
-    start_frame.pack_forget()  # Hide landing page
+    pause_button.config(state=tk.NORMAL, text="Pause Game")
+    update_total_game_time()
+
+    start_frame.pack_forget()
+
     top_frame.pack(ipady=5, pady=3)
     status_frame.pack(pady=5, ipadx=254)
     canvas.pack()
     move_history_frame.place(relheight=0.5, relx=0.15, rely=0.12)
     time_history_frame.place(relheight=0.509, relx=0.85, rely=0.375, anchor="e")
-    # log_frame.pack(anchor="e")
     bottom_frame.pack(ipadx=46, ipady=5, pady=1)
     output_frame.pack(padx=20, pady=1)
     draw_board(current_board)
     start_timer()
     command_frame.pack(ipadx=28, ipady=10)
-
 
 
 def exit_game():
@@ -428,12 +431,13 @@ def configure_button(button, bg_color, fg_color="white", active_bg=None, active_
 
 
 def undo_move():
-    """
-    Undo the last move when button is clicked.
-
-    :return: None
-    """
     global used_board, current_board
+
+    # Check if the game is paused
+    if is_paused:
+        messagebox.showinfo("Game Paused", "The game is paused. Resume the game to undo moves.")
+        return
+
     current_board = copy.deepcopy(used_board)
     draw_board(current_board)
 
@@ -472,10 +476,13 @@ def process_generate_all_next_moves():
                                       f"Board configurations saved.")
 
 def process_move_command():
-    """
-    Handles commands for the text box while playing game.
-    """
     global white_score, black_score
+
+    # Check if the game is paused
+    if is_paused:
+        messagebox.showinfo("Game Paused", "The game is paused. Resume the game to make moves.")
+        return
+
     move_text = move_entry.get().strip()
 
     if move_text.lower() == "save board":
@@ -508,6 +515,10 @@ def process_move_command():
             else:
                 black_score =+ 1
                 black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+
+        # Display the move in the moves log
+        display_ai_move_log(move_text)  # Add this line to log the move
+
         draw_board(current_board)
         end_turn()
     except (MoveError, PushNotAllowedError) as e:
@@ -515,6 +526,26 @@ def process_move_command():
     finally:
         move_entry.delete(0, tk.END)
 
+def on_board_click(event):
+    """
+    Handles clicks on the board.
+    """
+    if is_paused:
+        messagebox.showinfo("Game Paused", "The game is paused. Resume the game to make moves.")
+        return
+
+    # Handle board click logic here
+    pass
+
+def update_total_game_time():
+    if game_start_time and not is_paused:
+        elapsed_time = time.time() - game_start_time - total_pause_duration
+        timer_label.config(text=f"Time: {int(elapsed_time)}s")
+    root.after(1000, update_total_game_time)  # Update every second
+
+
+
+command_entry = tk.Entry(root)
 
 
 start_frame = tk.Frame(root, bg=THEME["bg"])
@@ -611,18 +642,12 @@ next_move_label = tk.Label(output_frame, text="Next move: {optimal next move goe
 next_move_label.pack(side="top", padx=10)
 
 # Log button UI that includes two buttons to display turn duration and AI move history logs
-# log_frame = tk.Frame(root, bg=THEME["bg"])
+# log_frame = tk.Frame(root, bg=THEMEa["bg"])
 
-# Frame for Move History (Left Side)
+# Initialize the move history frame (but do not show it yet)
 move_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
-# move_history_frame.place(relheight=0.5, x=10, y=115)
-# move_history_frame.pack(side="left", fill="y", padx=10, pady=10)
-
-# Label for Move History
 move_history_label = tk.Label(move_history_frame, text="Move History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
 move_history_label.pack(pady=5)
-
-# Text Widget to Display Move History
 move_history_text = tk.Text(move_history_frame, wrap=tk.WORD, width=30, height=30, bg=THEME["bg"], fg=THEME["text"])
 move_history_text.pack(fill="both", expand=True)
 
