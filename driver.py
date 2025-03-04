@@ -10,7 +10,7 @@ from board_io import export_current_board_to_text
 
 
 # Constant values for board size and hexagon size
-BOARD_SIZE = 550
+BOARD_SIZE = 535
 HEX_SIZE = 30
 
 # Define themes with background colors and element color schemes
@@ -286,7 +286,7 @@ def stop_game():
     status_frame.pack_forget()
     canvas.pack_forget()
     output_frame.pack_forget()
-    log_frame.pack_forget()
+    # log_frame.pack_forget()
     bottom_frame.pack_forget()
     command_frame.pack_forget()
     move_history_frame.place_forget()
@@ -398,17 +398,17 @@ def start_game():
     game_start_time = time.time()
 
     start_frame.pack_forget()  # Hide landing page
-    top_frame.pack(fill="x", pady=5)
-    status_frame.pack(fill="x", pady=5)
+    top_frame.pack(ipady=5, pady=3)
+    status_frame.pack(pady=5, ipadx=254)
     canvas.pack()
-    move_history_frame.place(relheight=0.5, x=10, y=115)
-    time_history_frame.place(relheight=0.509, relx=0.995, anchor="e", y=365)
-    output_frame.pack(side="right", padx=20, pady=(0, 90))
-    log_frame.pack(anchor="e")
-    bottom_frame.pack(fill="x", pady=5)
+    move_history_frame.place(relheight=0.5, relx=0.15, rely=0.12)
+    time_history_frame.place(relheight=0.509, relx=0.85, rely=0.375, anchor="e")
+    # log_frame.pack(anchor="e")
+    bottom_frame.pack(ipadx=46, ipady=5, pady=1)
+    output_frame.pack(padx=20, pady=1)
     draw_board(current_board)
     start_timer()
-    command_frame.pack(side="bottom", fill="x", pady=10)
+    command_frame.pack(ipadx=28, ipady=10)
 
 
 
@@ -603,18 +603,15 @@ configure_button(stop_button, "#FF0000")
 # Output box UI that displays last turn duration, previous move, and suggested next move
 output_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
 
-move_duration_label = tk.Label(output_frame, text="Duration of last turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
-move_duration_label.pack(side="top", padx=10, fill="both")
-prev_move_label = tk.Label(output_frame, text="Previous move: c3c4c5, d3d4d5", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
-prev_move_label.pack(side="top", padx=10, fill="both")
-next_move_label = tk.Label(output_frame, text="Next move: b3a3, c3b3", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
-next_move_label.pack(side="top", padx=10, fill="both")
+# move_duration_label = tk.Label(output_frame, text="Duration of last turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+# move_duration_label.pack(side="top", padx=10, fill="both")
+# prev_move_label = tk.Label(output_frame, text="Previous move: c3c4c5, d3d4d5", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+# prev_move_label.pack(side="top", padx=10, fill="both")
+next_move_label = tk.Label(output_frame, text="Next move: {optimal next move goes here}", font=("Arial", 18, "bold"), bg=THEME["bg"], fg=THEME["text"])
+next_move_label.pack(side="top", padx=10)
 
 # Log button UI that includes two buttons to display turn duration and AI move history logs
-log_frame = tk.Frame(root, bg=THEME["bg"])
-
-
-
+# log_frame = tk.Frame(root, bg=THEME["bg"])
 
 # Frame for Move History (Left Side)
 move_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
@@ -655,9 +652,9 @@ time_history_text.pack(fill="both", expand=True)
 status_frame = tk.Frame(root, bg=THEME["bg"])
 timer_label = tk.Label(status_frame, text="Time: 0s", font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"])
 white_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {white_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
-white_score_label.pack(side="left", padx=(0,200))
-black_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
-black_score_label.pack(side="right", padx=(200,0))
+white_score_label.pack(side="left")
+black_score_label = tk.Label(status_frame, text=f"Black Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
+black_score_label.pack(side="right")
 
 timer_label.pack(padx=10)
 
