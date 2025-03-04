@@ -102,6 +102,8 @@ black_score = 0
 theme_mode = "Light"
 is_paused = False
 player_times = {"Black": [], "White": []}
+total_game_time = None
+game_start_time = None
 start_time = None
 pause_time = None
 max_moves = 20  # Default value
@@ -252,7 +254,7 @@ def reset_game_state():
        Resets the game state variables, including player turns, move count, timers, and board state.
        Refreshes the UI elements and redraws the board.
     """
-    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score
+    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score, game_start_time, total_game_time
     current_player = "Black"
     move_count = 0
     move_counts["Black"] = 0
@@ -260,6 +262,8 @@ def reset_game_state():
     white_score = 0
     black_score = 0
     player_times = {"Player 1": [], "Player 2": []}
+    game_start_time = None
+    total_game_time = None
     start_time = None
     is_paused = False
     pause_time = None
@@ -297,13 +301,14 @@ def toggle_pause():
     """
         Toggles the pause state of the game. Updates button appearance and game timer accordingly.
     """
-    global is_paused, pause_time, start_time
+    global is_paused, pause_time, game_start_time
     if is_paused:
         is_paused = False
         configure_button(pause_button, THEME["btn_bg"], THEME["btn_fg"])
         pause_button.config(text="Pause Game")
         if pause_time is not None:
-            start_time += time.time() - pause_time
+            game_start_time += time.time() - pause_time
+
             pause_time = None
     else:
         is_paused = True
@@ -316,9 +321,12 @@ def start_timer():
     """
     Starts or updates the game timer. Ends turn if time limit is exceeded.
     """
-    global start_time, is_paused, total_game_time
+    global start_time, is_paused, total_game_time, game_start_time
 
     if not is_paused:
+        if game_start_time is None:
+            game_start_time = time.time()
+
         if start_time is None:
             start_time = time.time()  # Start the timer for the current move
 
@@ -394,9 +402,6 @@ def start_game():
             messagebox.showerror("Invalid Input", "Please enter a valid number or '∞' for unlimited time.")
             return
 
-    # Initialize game start time
-    game_start_time = time.time()
-
     start_frame.pack_forget()  # Hide landing page
     top_frame.pack(ipady=5, pady=3)
     status_frame.pack(pady=5, ipadx=254)
@@ -462,8 +467,8 @@ def process_generate_all_next_moves():
     turn_number = move_counts[current_player]
     output_dir = "./output"
 
-    moves_filename = os.path.join(output_dir, f"moves_turn{move_counts["White"] + move_counts["Black"]}.txt")
-    boards_filename = os.path.join(output_dir, f"boards_turn{move_counts["White"] + move_counts["Black"]}.txt")
+    moves_filename = os.path.join(output_dir, f"moves_turn{move_counts['White'] + move_counts['Black']}.txt")
+    boards_filename = os.path.join(output_dir, f"boards_turn{move_counts['White'] + move_counts['Black']}.txt")
 
     moves = generate_and_save_all_next_moves(current_board, current_color, current_player,
                                               moves_filename, boards_filename)
@@ -480,7 +485,7 @@ def process_move_command():
 
     if move_text.lower() == "save board":
         export_current_board_to_text(current_board, current_player,
-                                     f"./output/turn_{move_counts["White"] + move_counts["Black"]}.txt")
+                                     f"./output/turn_{move_counts['White'] + move_counts['Black']}.txt")
         messagebox.showinfo("Save Board", "Board has been saved.")
         move_entry.delete(0, tk.END)
         return
