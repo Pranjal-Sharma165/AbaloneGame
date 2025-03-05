@@ -147,12 +147,14 @@ def generate_and_save_all_next_moves(board: dict, color: str, turn: str,
 if __name__ == "__main__":
     #test
     input_filename = sys.argv[1]
+    output_filename = input_filename[:-6]
+    print(output_filename)
     a = time.time()
     board, turn = import_current_text_to_board(input_filename)
     current_color = BLACK_MARBLE if turn == "Black" else WHITE_MARBLE
 
-    moves_filename = "output/legal_moves.txt"
-    boards_filename = "output/next_boards.txt"
+    moves_filename = f"{output_filename}.move"
+    boards_filename = f"{output_filename}-Team3.board"
 
     moves = generate_and_save_all_next_moves(board, current_color, turn,
                                              moves_filename, boards_filename)
