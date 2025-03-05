@@ -306,8 +306,6 @@ def toggle_pause():
         if pause_time is not None:
             pause_duration = time.time() - pause_time
             total_pause_duration += pause_duration  # Accumulate pause duration
-            print(
-                f"DEBUG: Resuming game. Pause duration added: {pause_duration:.4f}s, Total pause: {total_pause_duration:.4f}s")
 
             # Adjust start_time to maintain correct move timing
             start_time += pause_duration
@@ -322,7 +320,6 @@ def toggle_pause():
         configure_button(pause_button, "#FF6347", "white")
         pause_button.config(text="Resume Game")
         pause_time = time.time()  # Record pause time
-        print(f"DEBUG: Game paused at {pause_time:.4f}")
 
         # Disable UI elements
         move_entry.config(state=tk.DISABLED)
@@ -337,7 +334,6 @@ def start_timer():
 
     if start_time is None:
         start_time = time.time()  # Start the timer only if it hasn't started
-        print(f"DEBUG: New move started at {start_time:.4f}")
 
     # Correct game time calculation: Only subtract total pause duration once
     total_game_time = time.time() - game_start_time - total_pause_duration
@@ -345,8 +341,6 @@ def start_timer():
 
     # Correct elapsed move time calculation
     elapsed_time = time.time() - start_time
-
-    print(f"DEBUG: Move duration = {elapsed_time:.4f}, start_time = {start_time:.4f}, total_pause_duration = {total_pause_duration:.4f}")
 
     if move_time_limit != float("inf") and elapsed_time >= move_time_limit:
         messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
@@ -369,16 +363,13 @@ def end_turn():
 
     if start_time is not None:
         move_duration = time.time() - start_time
-        print(f"DEBUG: Move duration = {move_duration:.4f}, start_time = {start_time:.4f}, total_pause_duration = {total_pause_duration:.4f}")
 
         total_game_time = time.time() - game_start_time - total_pause_duration
-        print(f"DEBUG: Updated total_game_time = {total_game_time:.4f}")
 
         display_turn_duration_log(current_player, move_duration)
 
         # Reset `start_time` for next move
         start_time = time.time()
-        print(f"DEBUG: Reset start_time = {start_time:.4f}")
 
     move_counts[current_player] += 1
     move_counter_label.config(text=f"Moves: {move_counts}")
@@ -525,17 +516,6 @@ def process_move_command():
         messagebox.showerror("Invalid Move", str(e))
     finally:
         move_entry.delete(0, tk.END)
-
-def on_board_click(event):
-    """
-    Handles clicks on the board.
-    """
-    if is_paused:
-        messagebox.showinfo("Game Paused", "The game is paused. Resume the game to make moves.")
-        return
-
-    # Handle board click logic here
-    pass
 
 def update_total_game_time():
     if game_start_time and not is_paused:
