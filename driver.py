@@ -107,6 +107,9 @@ pause_time = None
 max_moves = 20  # Default value
 move_time_limit = float("inf")  # Default: No time limit
 total_pause_duration = 0  # Tracks the total time the game has been paused
+total_game_time = None
+game_start_time = None
+game_time = 0
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -248,7 +251,7 @@ def change_theme():
     switch_theme()
 
 def reset_game_state():
-    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration
+    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time
 
     current_player = "Black"
     move_count = 0
@@ -260,9 +263,10 @@ def reset_game_state():
     start_time = None
     is_paused = False
     pause_time = None
+    total_game_time = None
+    game_start_time = None
     total_pause_duration = 0  # Reset the total pause duration
     move_counter_label.config(text=f"Moves: {move_count}")
-    timer_label.config(text="Time: 0s")
     update_turn_display()
     canvas.delete("all")
     current_board = copy.deepcopy(used_board)
@@ -327,7 +331,7 @@ def toggle_pause():
 
 
 def start_timer():
-    global start_time, total_game_time, total_pause_duration
+    global start_time, total_game_time, total_pause_duration, pause_time, game_start_time
 
     if is_paused:
         return  # Stop updating timer while paused
@@ -335,8 +339,17 @@ def start_timer():
     if start_time is None:
         start_time = time.time()  # Start the timer only if it hasn't started
 
-    # Correct game time calculation: Only subtract total pause duration once
-    total_game_time = time.time() - game_start_time - total_pause_duration
+    if total_game_time is None:
+        total_game_time = 0
+        game_start_time = time.time()
+        timer_label.config(text=f"Time: {int(total_game_time)}s")
+    else:
+        if pause_time is not None:
+            # Correct game time calculation: Only subtract total pause duration once
+            total_game_time = time.time() - game_start_time - total_pause_duration
+        else:
+            total_game_time = time.time() - game_start_time
+
     timer_label.config(text=f"Time: {int(total_game_time)}s")
 
     # Correct elapsed move time calculation
@@ -350,7 +363,7 @@ def start_timer():
     root.after(1000, start_timer)  # Call again after 1 second
 
 def end_turn():
-    global current_player, start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time
+    global current_player, start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time, game_start_time
 
     total_moves_played = move_counts["Black"] + move_counts["White"]
 
@@ -382,12 +395,13 @@ def end_turn():
 
 
 def start_game():
-    global game_start_time, total_pause_duration, is_paused, start_time
+    global game_start_time, total_pause_duration, is_paused, start_time, game_start_time
 
     game_start_time = time.time()
     total_pause_duration = 0
     is_paused = False
     start_time = time.time()
+    game_start_time = time.time()
 
     pause_button.config(state=tk.NORMAL, text="Pause Game")
     update_total_game_time()
@@ -457,8 +471,9 @@ def process_generate_all_next_moves():
     turn_number = move_counts[current_player]
     output_dir = "./output"
 
-    moves_filename = os.path.join(output_dir, f"moves_turn{move_counts["White"] + move_counts["Black"]}.txt")
-    boards_filename = os.path.join(output_dir, f"boards_turn{move_counts["White"] + move_counts["Black"]}.txt")
+    moves_filename = os.path.join(output_dir, f"moves_turn{move_counts['White'] + move_counts['Black']}.txt")
+    boards_filename = os.path.join(output_dir, f"boards_turn{move_counts['White'] + move_counts['Black']}.txt")
+
 
     moves = generate_and_save_all_next_moves(current_board, current_color, current_player,
                                               moves_filename, boards_filename)
@@ -478,8 +493,7 @@ def process_move_command():
 
     if move_text.lower() == "save board":
         export_current_board_to_text(current_board, current_player,
-                                     f"./output/turn_{move_counts["White"] + move_counts["Black"]}.txt")
-        messagebox.showinfo("Save Board", "Board has been saved.")
+                                     f"./output/turn_{move_counts['White'] + move_counts['Black']}.txt")
         move_entry.delete(0, tk.END)
         return
 
