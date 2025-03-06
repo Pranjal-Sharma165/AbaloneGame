@@ -4,9 +4,10 @@ import math
 import time
 import copy
 import os
-from next_moves_generator import generate_and_save_all_next_moves
-from moves import (parse_move_input, move_marbles_cmd, validate_move_directions, MoveError, PushNotAllowedError)
-from board_io import export_current_board_to_text
+
+from next_moves_generator import NextMove
+from moves import Move, MoveError, PushNotAllowedError
+from board_io import BoardIO
 
 
 # Constant values for board size and hexagon size
@@ -472,21 +473,17 @@ def display_turn_duration_log(player, duration):
     time_history_text.config(state="disabled")  # Disable editing
 
 def process_generate_all_next_moves():
-    """
-    Generates legal next-ply moves and saves two files:
-    """
     global current_board, current_player, move_counts
 
-    current_color = BLACK_MARBLE if current_player == "Black" else WHITE_MARBLE
-    turn_number = move_counts[current_player]
+    current_color = BoardIO.BLACK_MARBLE if current_player == "Black" else BoardIO.WHITE_MARBLE
     output_dir = "./output"
+    turn_total = move_counts['White'] + move_counts['Black']
 
-    moves_filename = os.path.join(output_dir, f"moves_turn{move_counts['White'] + move_counts['Black']}.txt")
-    boards_filename = os.path.join(output_dir, f"boards_turn{move_counts['White'] + move_counts['Black']}.txt")
+    moves_filename = os.path.join(output_dir, f"moves_turn{turn_total}.txt")
+    boards_filename = os.path.join(output_dir, f"boards_turn{turn_total}.txt")
 
-
-    moves = generate_and_save_all_next_moves(current_board, current_color, current_player,
-                                              moves_filename, boards_filename)
+    moves = NextMove.generate_and_save_all_next_moves(current_board, current_color, current_player,
+                                                        moves_filename, boards_filename)
     messagebox.showinfo("Next Moves", f"Generated {len(moves)} moves.\n"
                                       f"Move notations saved.\n"
                                       f"Board configurations saved.")
@@ -494,16 +491,16 @@ def process_generate_all_next_moves():
 def process_move_command():
     global white_score, black_score
 
-    # Check if the game is paused
     if is_paused:
-        messagebox.showinfo("Game Paused", "The game is paused. Resume the game to make moves.")
+        messagebox.showinfo("Game Paused", "The game is paused. Resume the game to command.")
         return
 
     move_text = move_entry.get().strip()
 
     if move_text.lower() == "save board":
-        export_current_board_to_text(current_board, current_player,
+        BoardIO.export_current_board_to_text(current_board, current_player,
                                      f"./output/turn_{move_counts['White'] + move_counts['Black']}.txt")
+        messagebox.showinfo("Current board saved", f"Generated the current board.\n")
         move_entry.delete(0, tk.END)
         return
 
@@ -513,27 +510,25 @@ def process_move_command():
         return
 
     try:
-        source_list, dest_list = parse_move_input(move_text)
-        expected_color = BLACK_MARBLE if current_player == "Black" else WHITE_MARBLE
-        opponent_color = WHITE_MARBLE if current_player == "Black" else BLACK_MARBLE
+        source_list, dest_list = Move.parse_move_input(move_text)
+        expected_color = BoardIO.BLACK_MARBLE if current_player == "Black" else BoardIO.WHITE_MARBLE
+        opponent_color = BoardIO.WHITE_MARBLE if current_player == "Black" else BoardIO.BLACK_MARBLE
+
         for coord in source_list:
             if current_board.get(coord) != expected_color:
                 raise MoveError("Move your own marbles!")
 
-        direction = validate_move_directions(source_list, dest_list)
-
-        push_success = move_marbles_cmd(current_board, source_list, direction, expected_color, opponent_color)
+        direction = Move.validate_move_directions(source_list, dest_list)
+        push_success = Move.move_marbles_cmd(current_board, source_list, direction, expected_color, opponent_color)
         if push_success:
-            if expected_color == BLACK_MARBLE:
-                white_score =+ 1
+            if expected_color == BoardIO.BLACK_MARBLE:
+                white_score += 1
                 white_score_label.config(text=f"White Marbles Lost: {white_score}")
             else:
-                black_score =+ 1
+                black_score += 1
                 black_score_label.config(text=f"Black Marbles Lost: {black_score}")
 
-        # Display the move in the moves log
-        display_ai_move_log(move_text)  # Add this line to log the move
-
+        display_ai_move_log(move_text)
         draw_board(current_board)
         end_turn()
     except (MoveError, PushNotAllowedError) as e:
@@ -548,192 +543,192 @@ def update_total_game_time():
     root.after(1000, update_total_game_time)  # Update every second
 
 
-
-command_entry = tk.Entry(root)
-
-
-start_frame = tk.Frame(root, bg=THEME["bg"])
-start_frame.pack(pady=100)
-
-start_label = tk.Label(start_frame, text="Welcome to Abalone!", font=("Arial", 24, "bold"), bg=THEME["bg"], fg=THEME["text"])
-start_label.pack(pady=20)
-
-# Creating board layout label
-board_layout_label = tk.Label(start_frame, text="Board Layout: ")
-board_layout_label.pack(pady=10)
-
-# Creating board layout box
-board_layout_box = ttk.Combobox(start_frame, state = "readonly", values = ["Standard", "German Daisy", "Belgin Daisy"])
-board_layout_box.pack(pady=5)
-board_layout_box.set("Standard")
-
-# Calling setup_board_layout function to change the board layout
-board_layout_box.bind("<<ComboboxSelected>>", setup_board_layout)
-
-# Creating game mode label
-game_mode_label = tk.Label(start_frame, text="Game Mode: ")
-game_mode_label.pack(pady=10)
-
-#Creating game mode box
-game_mode_box = ttk.Combobox(start_frame, state = "readonly", values = ["Computer VS Player", "Player VS Player", "Computer VS Computer"])
-game_mode_box.pack(pady=5)
-game_mode_box.set("Computer VS Player")
-
-# Creating label and entry for max moves allowed
-max_moves_label = tk.Label(start_frame, text="Max Moves Per Player:", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
-max_moves_label.pack(pady=10)
-
-max_moves_entry = tk.Entry(start_frame, font=("Arial", 12))
-max_moves_entry.pack(pady=5)
-max_moves_entry.insert(0, "20")  # Default value
-
-# Creating label and entry for time limit per move
-time_limit_label = tk.Label(start_frame, text="Time Limit Per Move (seconds)(i for ∞):", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
-time_limit_label.pack(pady=10)
-
-time_limit_entry = tk.Entry(start_frame, font=("Arial", 12))
-time_limit_entry.pack(pady=5)
-time_limit_entry.insert(0, "i")  # Default to infinity
-
-start_button = tk.Button(start_frame, text="Start Game", command=start_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
-start_button.pack(pady=10)
-
-exit_button = tk.Button(start_frame, text="Exit", command=exit_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
-exit_button.pack(pady=10)
-
-top_frame = tk.Frame(root, bg=THEME["bg"])
-reset_button = tk.Button(top_frame, text="Reset Game", command=reset_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-theme_button = tk.Button(top_frame, text="Switch Theme", command=switch_theme, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-pause_button = tk.Button(top_frame, text="Pause Game", command=toggle_pause, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-undo_button = tk.Button(top_frame, text="Undo Move", command=undo_move, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-# end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-
-reset_button.pack(side="left", padx=10)
-theme_button.pack(side="left", padx=10)
-pause_button.pack(side="left", padx=10)
-undo_button.pack(side="left", padx=10)
-# end_turn_button.pack(side="left", padx=10)
-stop_button.pack(side="left", padx=10)
-
-theme_label = tk.Label(top_frame, text="Choose Theme", font=("Arial", 12))
-theme_label.pack(side="left", padx=10)
-
-theme_options = list(THEMES.keys())
-
-theme_button.config(command=change_theme)
-theme_button.pack_forget()
-theme_dropdown = tk.OptionMenu(top_frame, tk.StringVar(value=theme_mode), *theme_options, command=switch_theme)
-theme_dropdown.pack(side="left", padx=10)
-
-configure_button(start_button, "#4CAF50")
-configure_button(exit_button, "#f44336")
-configure_button(reset_button, "#008CBA")
-configure_button(theme_button, "#FF9800")
-configure_button(pause_button, "#9C27B0")
-configure_button(undo_button, "#eb6e34")
-# configure_button(end_turn_button, "#2196F3")
-configure_button(stop_button, "#FF0000")
-
-# Output box UI that displays last turn duration, previous move, and suggested next move
-output_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
-
-# move_duration_label = tk.Label(output_frame, text="Duration of last turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
-# move_duration_label.pack(side="top", padx=10, fill="both")
-# prev_move_label = tk.Label(output_frame, text="Previous move: c3c4c5, d3d4d5", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
-# prev_move_label.pack(side="top", padx=10, fill="both")
-next_move_label = tk.Label(output_frame, text="Next move: {optimal next move goes here}", font=("Arial", 18, "bold"), bg=THEME["bg"], fg=THEME["text"])
-next_move_label.pack(side="top", padx=10)
-
-# Log button UI that includes two buttons to display turn duration and AI move history logs
-# log_frame = tk.Frame(root, bg=THEMEa["bg"])
-
-# Initialize the move history frame (but do not show it yet)
-move_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
-move_history_label = tk.Label(move_history_frame, text="Move History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
-move_history_label.pack(pady=5)
-move_history_text = tk.Text(
-    move_history_frame,
-    wrap=tk.WORD,
-    width=30,
-    height=30,
-    bg=THEME["bg"],
-    fg=THEME["text"],
-    state="disabled"  # Make it read-only
-)
-move_history_text.pack(fill="both", expand=True)
-
-# Frame for Time History (Right Side)
-time_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
-# time_history_frame.place(relheight=0.509, relx=0.995, anchor="e", y=365)
-# time_history_frame.pack(side="right", fill="y", padx=10, pady=10)
-
-# Label for Time History
-time_history_label = tk.Label(time_history_frame, text="Time History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
-time_history_label.pack(pady=5)
-
-time_history_text = tk.Text(
-    time_history_frame,
-    wrap=tk.WORD,
-    width=30,
-    height=30,
-    bg=THEME["bg"],
-    fg=THEME["text"],
-    state="disabled"  # Make it read-only
-)
-time_history_text.pack(fill="both", expand=True)
+if __name__ == '__main__':
+    command_entry = tk.Entry(root)
 
 
+    start_frame = tk.Frame(root, bg=THEME["bg"])
+    start_frame.pack(pady=100)
+
+    start_label = tk.Label(start_frame, text="Welcome to Abalone!", font=("Arial", 24, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    start_label.pack(pady=20)
+
+    # Creating board layout label
+    board_layout_label = tk.Label(start_frame, text="Board Layout: ")
+    board_layout_label.pack(pady=10)
+
+    # Creating board layout box
+    board_layout_box = ttk.Combobox(start_frame, state = "readonly", values = ["Standard", "German Daisy", "Belgin Daisy"])
+    board_layout_box.pack(pady=5)
+    board_layout_box.set("Standard")
+
+    # Calling setup_board_layout function to change the board layout
+    board_layout_box.bind("<<ComboboxSelected>>", setup_board_layout)
+
+    # Creating game mode label
+    game_mode_label = tk.Label(start_frame, text="Game Mode: ")
+    game_mode_label.pack(pady=10)
+
+    #Creating game mode box
+    game_mode_box = ttk.Combobox(start_frame, state = "readonly", values = ["Computer VS Player", "Player VS Player", "Computer VS Computer"])
+    game_mode_box.pack(pady=5)
+    game_mode_box.set("Computer VS Player")
+
+    # Creating label and entry for max moves allowed
+    max_moves_label = tk.Label(start_frame, text="Max Moves Per Player:", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
+    max_moves_label.pack(pady=10)
+
+    max_moves_entry = tk.Entry(start_frame, font=("Arial", 12))
+    max_moves_entry.pack(pady=5)
+    max_moves_entry.insert(0, "20")  # Default value
+
+    # Creating label and entry for time limit per move
+    time_limit_label = tk.Label(start_frame, text="Time Limit Per Move (seconds)(i for ∞):", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
+    time_limit_label.pack(pady=10)
+
+    time_limit_entry = tk.Entry(start_frame, font=("Arial", 12))
+    time_limit_entry.pack(pady=5)
+    time_limit_entry.insert(0, "i")  # Default to infinity
+
+    start_button = tk.Button(start_frame, text="Start Game", command=start_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
+    start_button.pack(pady=10)
+
+    exit_button = tk.Button(start_frame, text="Exit", command=exit_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
+    exit_button.pack(pady=10)
+
+    top_frame = tk.Frame(root, bg=THEME["bg"])
+    reset_button = tk.Button(top_frame, text="Reset Game", command=reset_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+    theme_button = tk.Button(top_frame, text="Switch Theme", command=switch_theme, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+    pause_button = tk.Button(top_frame, text="Pause Game", command=toggle_pause, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+    undo_button = tk.Button(top_frame, text="Undo Move", command=undo_move, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+    # end_turn_button = tk.Button(top_frame, text="End Turn", command=end_turn, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+    stop_button = tk.Button(top_frame, text="Stop Game", command=stop_game, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+
+    reset_button.pack(side="left", padx=10)
+    theme_button.pack(side="left", padx=10)
+    pause_button.pack(side="left", padx=10)
+    undo_button.pack(side="left", padx=10)
+    # end_turn_button.pack(side="left", padx=10)
+    stop_button.pack(side="left", padx=10)
+
+    theme_label = tk.Label(top_frame, text="Choose Theme", font=("Arial", 12))
+    theme_label.pack(side="left", padx=10)
+
+    theme_options = list(THEMES.keys())
+
+    theme_button.config(command=change_theme)
+    theme_button.pack_forget()
+    theme_dropdown = tk.OptionMenu(top_frame, tk.StringVar(value=theme_mode), *theme_options, command=switch_theme)
+    theme_dropdown.pack(side="left", padx=10)
+
+    configure_button(start_button, "#4CAF50")
+    configure_button(exit_button, "#f44336")
+    configure_button(reset_button, "#008CBA")
+    configure_button(theme_button, "#FF9800")
+    configure_button(pause_button, "#9C27B0")
+    configure_button(undo_button, "#eb6e34")
+    # configure_button(end_turn_button, "#2196F3")
+    configure_button(stop_button, "#FF0000")
+
+    # Output box UI that displays last turn duration, previous move, and suggested next move
+    output_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
+
+    # move_duration_label = tk.Label(output_frame, text="Duration of last turn: 00:00:36 seconds", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+    # move_duration_label.pack(side="top", padx=10, fill="both")
+    # prev_move_label = tk.Label(output_frame, text="Previous move: c3c4c5, d3d4d5", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"], anchor="w", justify="left")
+    # prev_move_label.pack(side="top", padx=10, fill="both")
+    next_move_label = tk.Label(output_frame, text="Next move: {optimal next move goes here}", font=("Arial", 18, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    next_move_label.pack(side="top", padx=10)
+
+    # Log button UI that includes two buttons to display turn duration and AI move history logs
+    # log_frame = tk.Frame(root, bg=THEMEa["bg"])
+
+    # Initialize the move history frame (but do not show it yet)
+    move_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
+    move_history_label = tk.Label(move_history_frame, text="Move History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    move_history_label.pack(pady=5)
+    move_history_text = tk.Text(
+        move_history_frame,
+        wrap=tk.WORD,
+        width=30,
+        height=30,
+        bg=THEME["bg"],
+        fg=THEME["text"],
+        state="disabled"  # Make it read-only
+    )
+    move_history_text.pack(fill="both", expand=True)
+
+    # Frame for Time History (Right Side)
+    time_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
+    # time_history_frame.place(relheight=0.509, relx=0.995, anchor="e", y=365)
+    # time_history_frame.pack(side="right", fill="y", padx=10, pady=10)
+
+    # Label for Time History
+    time_history_label = tk.Label(time_history_frame, text="Time History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    time_history_label.pack(pady=5)
+
+    time_history_text = tk.Text(
+        time_history_frame,
+        wrap=tk.WORD,
+        width=30,
+        height=30,
+        bg=THEME["bg"],
+        fg=THEME["text"],
+        state="disabled"  # Make it read-only
+    )
+    time_history_text.pack(fill="both", expand=True)
 
 
 
-# move_history_button = tk.Button(log_frame, text="AI Move History", command=display_ai_move_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-# move_history_button.pack(side="left", padx=(0,10))
-# time_history_button = tk.Button(log_frame, text="Turn Duration History", command=display_turn_duration_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
-# time_history_button.pack(side="left")
-
-# Adding label to show game mode
-status_frame = tk.Frame(root, bg=THEME["bg"])
-timer_label = tk.Label(status_frame, text="Time: 0s", font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"])
-white_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {white_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
-white_score_label.pack(side="left")
-black_score_label = tk.Label(status_frame, text=f"Black Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
-black_score_label.pack(side="right")
-
-timer_label.pack(padx=10)
-
-bottom_frame = tk.Frame(root, bg=THEME["bg"])
-turn_label = tk.Label(
-    bottom_frame,
-    text=f"Current Player: {current_player}",
-    font=("Arial", 14),
-    bg=THEME["bg"],
-    fg=THEME["text"],
-    relief="solid",
-    bd=2,
-    padx=10,
-    pady=5
-)
-turn_label.pack(side="left", padx=10)
-move_counter_label = tk.Label(bottom_frame, text=f"Moves: {move_counts}", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
-
-turn_label.pack(side="left", padx=10)
-move_counter_label.pack(side="left", padx=10)
-
-canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
 
 
-command_frame = tk.Frame(root, bg=THEME["bg"])
-move_label = tk.Label(command_frame, text="Enter your Command:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
-move_label.pack(pady=5)
-entry_frame = tk.Frame(command_frame, bg=THEME["bg"])
-entry_frame.pack(pady=3)
-move_entry = tk.Entry(entry_frame, width=50, font=("Arial", 12))
-move_entry.pack(side="left", padx=5)
+    # move_history_button = tk.Button(log_frame, text="AI Move History", command=display_ai_move_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+    # move_history_button.pack(side="left", padx=(0,10))
+    # time_history_button = tk.Button(log_frame, text="Turn Duration History", command=display_turn_duration_log, bg=THEME["btn_bg"], fg=THEME["btn_fg"], font=("Arial", 12), relief="raised", bd=2)
+    # time_history_button.pack(side="left")
 
-move_entry.bind("<Return>", lambda event: process_move_command())
+    # Adding label to show game mode
+    status_frame = tk.Frame(root, bg=THEME["bg"])
+    timer_label = tk.Label(status_frame, text="Time: 0s", font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"])
+    white_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {white_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    white_score_label.pack(side="left")
+    black_score_label = tk.Label(status_frame, text=f"Black Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    black_score_label.pack(side="right")
 
-# move_button = tk.Button(entry_frame, text="Move", command=process_move_command, font=("Arial", 12), bg=THEME["btn_bg"], fg=THEME["btn_fg"])
-# move_button.pack(side="left", padx=5)
+    timer_label.pack(padx=10)
 
-root.mainloop()
+    bottom_frame = tk.Frame(root, bg=THEME["bg"])
+    turn_label = tk.Label(
+        bottom_frame,
+        text=f"Current Player: {current_player}",
+        font=("Arial", 14),
+        bg=THEME["bg"],
+        fg=THEME["text"],
+        relief="solid",
+        bd=2,
+        padx=10,
+        pady=5
+    )
+    turn_label.pack(side="left", padx=10)
+    move_counter_label = tk.Label(bottom_frame, text=f"Moves: {move_counts}", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
+
+    turn_label.pack(side="left", padx=10)
+    move_counter_label.pack(side="left", padx=10)
+
+    canvas = tk.Canvas(root, width=BOARD_SIZE, height=BOARD_SIZE, bg=THEME["bg"])
+
+
+    command_frame = tk.Frame(root, bg=THEME["bg"])
+    move_label = tk.Label(command_frame, text="Enter your Command:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
+    move_label.pack(pady=5)
+    entry_frame = tk.Frame(command_frame, bg=THEME["bg"])
+    entry_frame.pack(pady=3)
+    move_entry = tk.Entry(entry_frame, width=50, font=("Arial", 12))
+    move_entry.pack(side="left", padx=5)
+
+    move_entry.bind("<Return>", lambda event: process_move_command())
+
+    # move_button = tk.Button(entry_frame, text="Move", command=process_move_command, font=("Arial", 12), bg=THEME["btn_bg"], fg=THEME["btn_fg"])
+    # move_button.pack(side="left", padx=5)
+
+    root.mainloop()
