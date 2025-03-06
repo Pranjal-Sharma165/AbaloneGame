@@ -350,8 +350,6 @@ def start_timer():
         else:
             total_game_time = time.time() - game_start_time
 
-    timer_label.config(text=f"Time: {int(total_game_time)}s")
-
     # Correct elapsed move time calculation
     elapsed_time = time.time() - start_time
 
@@ -363,39 +361,47 @@ def start_timer():
     root.after(1000, start_timer)  # Call again after 1 second
 
 def end_turn():
-    global current_player, start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time, game_start_time
+    global current_player, start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time
 
-    total_moves_played = move_counts["Black"] + move_counts["White"]
+    # Calculate total moves played by both players
+    total_moves_played = move_counts['Black'] + move_counts['White']
 
-    if total_moves_played >= (2 * max_moves) - 1:
-        move_counts[current_player] += 1
-        move_counter_label.config(text=f"Moves: {move_counts}")
+    # Check if the next move will exceed the move limit
+    if total_moves_played >= 2 * max_moves - 1:
         messagebox.showinfo("Game Over", "Both players have reached their move limit! Game Over.")
         stop_game()
         return
 
-    if start_time is not None:
-        move_duration = time.time() - start_time
-
-        total_game_time = time.time() - game_start_time - total_pause_duration
-
-        display_turn_duration_log(current_player, move_duration)
-
-        # Reset `start_time` for next move
-        start_time = time.time()
-
+    # Update move count for the current player
     move_counts[current_player] += 1
+
+    # Update the move counter label
     move_counter_label.config(text=f"Moves: {move_counts}")
 
+    # Calculate move duration and update logs
+    if start_time is not None:
+        move_duration = time.time() - start_time
+        total_game_time = time.time() - game_start_time - total_pause_duration
+        display_turn_duration_log(current_player, move_duration)
+
+        # Reset start_time for the next move
+        start_time = time.time()
+
+    # Switch to the next player
     current_player = "White" if current_player == "Black" else "Black"
     is_paused = False
     pause_time = None
     update_turn_display()
-    start_timer()
 
 
 def start_game():
-    global game_start_time, total_pause_duration, is_paused, start_time, game_start_time
+    global game_start_time, total_pause_duration, is_paused, start_time, game_start_time, max_moves
+
+    try:
+        max_moves = int(max_moves_entry.get())
+    except ValueError:
+        messagebox.showerror("Invalid Input", "Please enter a valid number for max moves.")
+        return
 
     game_start_time = time.time()
     total_pause_duration = 0
@@ -451,15 +457,19 @@ def display_ai_move_log(move):
     """
     Updates the move history display with the latest move.
     """
-    move_history_text.insert(tk.END, f"{move}\n")  # Append the move to the Text widget
+    move_history_text.config(state="normal")  # Enable editing
+    move_history_text.insert(tk.END, f"{move}\n")  # Append the move
     move_history_text.see(tk.END)  # Scroll to the bottom
+    move_history_text.config(state="disabled")  # Disable editing
 
 def display_turn_duration_log(player, duration):
     """
     Updates the time history display with the time taken by the player for their move.
     """
+    time_history_text.config(state="normal")  # Enable editing
     time_history_text.insert(tk.END, f"{player}: {duration:.2f} sec\n")  # Append the move duration
     time_history_text.see(tk.END)  # Scroll to the bottom
+    time_history_text.config(state="disabled")  # Disable editing
 
 def process_generate_all_next_moves():
     """
@@ -642,7 +652,15 @@ next_move_label.pack(side="top", padx=10)
 move_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
 move_history_label = tk.Label(move_history_frame, text="Move History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
 move_history_label.pack(pady=5)
-move_history_text = tk.Text(move_history_frame, wrap=tk.WORD, width=30, height=30, bg=THEME["bg"], fg=THEME["text"])
+move_history_text = tk.Text(
+    move_history_frame,
+    wrap=tk.WORD,
+    width=30,
+    height=30,
+    bg=THEME["bg"],
+    fg=THEME["text"],
+    state="disabled"  # Make it read-only
+)
 move_history_text.pack(fill="both", expand=True)
 
 # Frame for Time History (Right Side)
@@ -654,8 +672,15 @@ time_history_frame = tk.Frame(root, bg=THEME["bg"], bd=5, relief="solid")
 time_history_label = tk.Label(time_history_frame, text="Time History", font=("Arial", 14, "bold"), bg=THEME["bg"], fg=THEME["text"])
 time_history_label.pack(pady=5)
 
-# Text Widget to Display Time History
-time_history_text = tk.Text(time_history_frame, wrap=tk.WORD, width=30, height=30, bg=THEME["bg"], fg=THEME["text"])
+time_history_text = tk.Text(
+    time_history_frame,
+    wrap=tk.WORD,
+    width=30,
+    height=30,
+    bg=THEME["bg"],
+    fg=THEME["text"],
+    state="disabled"  # Make it read-only
+)
 time_history_text.pack(fill="both", expand=True)
 
 
