@@ -1,3 +1,4 @@
+import functools
 import re
 
 class MoveError(Exception):
@@ -36,6 +37,10 @@ class NonCollinearError(MoveError):
     """Raised when three marbles are not collinear to move."""
     pass
 
+class InlineMovementError(MoveError):
+    """Raised when three marbles push marbles, not being in-line state"""
+    pass
+
 class Move:
     DIRECTION_VECTORS = {
         "upper_left": (1, 0),
@@ -61,6 +66,7 @@ class Move:
         return chr(ord(row) - 1)
 
     @staticmethod
+    @functools.lru_cache(maxsize=None)
     def get_neighbors(coord: str) -> list:
         """
         Returns all neighbor coordinates for a given coordinate.
@@ -79,16 +85,31 @@ class Move:
         """
         Checks if the given coordinates form a contiguous group.
         """
-        if not coords:
+        n = len(coords)
+        if n <= 1:
             return True
+        if n == 2:
+            a, b = coords
+            return b in Move.get_neighbors(a)
+        if n == 3:
+            a, b, c = coords
+            edge_ab = b in Move.get_neighbors(a)
+            edge_ac = c in Move.get_neighbors(a)
+            edge_bc = c in Move.get_neighbors(b)
+            if (edge_ab + edge_ac + edge_bc) >= 2:
+                return True
+            else:
+                return False
         visited = set()
-        def dfs(c):
-            if c in visited:
+
+        def dfs(_c):
+            if _c in visited:
                 return
-            visited.add(c)
-            for nbr in Move.get_neighbors(c):
+            visited.add(_c)
+            for nbr in Move.get_neighbors(_c):
                 if nbr in coords and nbr not in visited:
                     dfs(nbr)
+
         dfs(coords[0])
         return len(visited) == len(coords)
 
@@ -274,7 +295,7 @@ class Move:
 
         if board.get(destinations[lead], "Blank") == opponent_marble:
             if not inline:
-                raise InvalidDirectionError("Push moves require an inline formation of marbles.")
+                raise InlineMovementError("Push moves require an inline formation of marbles.")
             opponent_chain = []
             current = destinations[lead]
             while True:
@@ -305,7 +326,7 @@ class Move:
                     board[opp] = "Blank"
             for coord in marble_coords:
                 if destinations[coord] not in marble_coords and board.get(destinations[coord], "Blank") != "Blank":
-                    raise OverlapError("Destination cell is blocked for push move.")
+                    raise PushNotAllowedError("Destination cell is blocked for push move.")
             for coord in marble_coords:
                 board[coord] = "Blank"
             for coord in marble_coords:
@@ -316,7 +337,7 @@ class Move:
                 if destinations[coord] is None:
                     raise BoardBoundaryError("Cannot move off-board.")
                 if destinations[coord] not in marble_coords and board.get(destinations[coord], "Blank") != "Blank":
-                    raise OverlapError("Destination cell is blocked.")
+                    raise PushNotAllowedError("Destination cell is blocked.")
             for coord in marble_coords:
                 board[coord] = "Blank"
             for coord in marble_coords:

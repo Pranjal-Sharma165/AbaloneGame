@@ -1,5 +1,4 @@
 import sys
-import copy
 import itertools
 import time
 
@@ -13,7 +12,6 @@ class NoLegalMovesError(Exception):
 class NextMove:
     @staticmethod
     def board_to_canonical_string(_board: dict, _turn: str) -> str:
-
         black_coords = []
         white_coords = []
         for coord, cell in _board.items():
@@ -35,7 +33,6 @@ class NextMove:
 
     @staticmethod
     def find_all_groups_of_size_1_2_3(_board: dict, color: str) -> list:
-
         all_positions = [coord for coord, val in _board.items() if val == color]
         groups = set()
         for size in [1, 2, 3]:
@@ -47,7 +44,6 @@ class NextMove:
 
     @staticmethod
     def generate_move_notation(marble_coords: list, direction: str) -> str:
-
         source_str = "".join(sorted(marble_coords))
         dest_coords = []
         for c in marble_coords:
@@ -60,7 +56,6 @@ class NextMove:
 
     @staticmethod
     def generate_all_next_moves(_board: dict, color: str, _turn: str) -> list:
-
         results = []
         seen = set()
         groups = NextMove.find_all_groups_of_size_1_2_3(_board, color)
@@ -69,7 +64,7 @@ class NextMove:
         for group in groups:
             group_list = list(group)
             for d in directions:
-                new_board = copy.deepcopy(_board)
+                new_board = _board.copy()
                 try:
                     Move.move_marbles_cmd(new_board, group_list, d, color, opponent_color)
                     canon = NextMove.board_to_canonical_string(new_board, _turn)
@@ -86,14 +81,12 @@ class NextMove:
 
     @staticmethod
     def save_legal_move_notations(_moves: list, _output_filename: str) -> None:
-
         with open(_output_filename, "w") as f:
             for notation, canon in _moves:
                 f.write(notation + "\n")
 
     @staticmethod
     def save_board_configurations(_moves: list, _output_filename: str) -> None:
-
         with open(_output_filename, "w") as f:
             for notation, canon in _moves:
                 f.write(canon + "\n")
@@ -101,7 +94,6 @@ class NextMove:
     @staticmethod
     def generate_and_save_all_next_moves(_board: dict, color: str, _turn: str,
                                            _moves_filename: str, _boards_filename: str) -> list:
-
         _moves = NextMove.generate_all_next_moves(_board, color, _turn)
         NextMove.save_legal_move_notations(_moves, _moves_filename)
         NextMove.save_board_configurations(_moves, _boards_filename)
@@ -111,13 +103,14 @@ if __name__ == "__main__":
     input_filename = sys.argv[1]
     output_filename = input_filename[:-6]
     a = time.time()
-    board, turn = BoardIO.import_current_text_to_board(input_filename)
-    current_color = BoardIO.BLACK_MARBLE if turn == "Black" else BoardIO.WHITE_MARBLE
+    for _ in range(2500):
+        board, turn = BoardIO.import_current_text_to_board(input_filename)
+        current_color = BoardIO.BLACK_MARBLE if turn == "Black" else BoardIO.WHITE_MARBLE
 
-    moves_filename = f"{output_filename}.move"
-    boards_filename = f"{output_filename}-Team3.board"
+        moves_filename = f"{output_filename}.move"
+        boards_filename = f"{output_filename}-Team3.board"
 
-    moves = NextMove.generate_and_save_all_next_moves(board, current_color, turn,
-                                                        moves_filename, boards_filename)
+        moves = NextMove.generate_and_save_all_next_moves(board, current_color, turn,
+                                                          moves_filename, boards_filename)
     b = time.time()
     print(f"time taken: {b - a} seconds")
