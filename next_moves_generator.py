@@ -103,14 +103,13 @@ if __name__ == "__main__":
     input_filename = sys.argv[1]
     output_filename = input_filename[:-6]
     a = time.time()
-    for _ in range(2500):
-        board, turn = BoardIO.import_current_text_to_board(input_filename)
-        current_color = BoardIO.BLACK_MARBLE if turn == "Black" else BoardIO.WHITE_MARBLE
+    board, turn = BoardIO.import_current_text_to_board(input_filename)
+    current_color = BoardIO.BLACK_MARBLE if turn == "Black" else BoardIO.WHITE_MARBLE
 
-        moves_filename = f"{output_filename}.move"
-        boards_filename = f"{output_filename}-Team3.board"
+    moves_filename = f"{output_filename}.move"
+    boards_filename = f"{output_filename}-Team3.board"
 
-        moves = NextMove.generate_and_save_all_next_moves(board, current_color, turn,
-                                                          moves_filename, boards_filename)
+    moves = NextMove.generate_and_save_all_next_moves(board, current_color, turn,
+                                                      moves_filename, boards_filename)
     b = time.time()
     print(f"time taken: {b - a} seconds")

@@ -41,6 +41,10 @@ class InlineMovementError(MoveError):
     """Raised when three marbles push marbles, not being in-line state"""
     pass
 
+class ThreeMarblesError(MoveError):
+    """Three marbles' special rule"""
+    pass
+
 class Move:
     DIRECTION_VECTORS = {
         "upper_left": (1, 0),
@@ -71,14 +75,9 @@ class Move:
         """
         Returns all neighbor coordinates for a given coordinate.
         """
-        neighbors = []
         row = coord[0]
         col = int(coord[1:])
-        for dr, dc in Move.DIRECTION_VECTORS.values():
-            new_row = chr(ord(row) + dr)
-            new_col = col + dc
-            neighbors.append(f"{new_row}{new_col}")
-        return neighbors
+        return [f"{chr(ord(row) + dr)}{col + dc}" for dr, dc in Move.DIRECTION_VECTORS.values()]
 
     @staticmethod
     def are_coordinates_contiguous(coords: list) -> bool:
@@ -93,15 +92,11 @@ class Move:
             return b in Move.get_neighbors(a)
         if n == 3:
             a, b, c = coords
-            edge_ab = b in Move.get_neighbors(a)
-            edge_ac = c in Move.get_neighbors(a)
-            edge_bc = c in Move.get_neighbors(b)
-            if (edge_ab + edge_ac + edge_bc) >= 2:
-                return True
-            else:
-                return False
+            neigh_a = set(Move.get_neighbors(a))
+            neigh_b = set(Move.get_neighbors(b))
+            count = (b in neigh_a) + (c in neigh_a) + (c in neigh_b)
+            return count >= 2
         visited = set()
-
         def dfs(_c):
             if _c in visited:
                 return
@@ -109,7 +104,6 @@ class Move:
             for nbr in Move.get_neighbors(_c):
                 if nbr in coords and nbr not in visited:
                     dfs(nbr)
-
         dfs(coords[0])
         return len(visited) == len(coords)
 
@@ -130,19 +124,45 @@ class Move:
             delta_r = r - ref_row
             delta_c = c - ref_col
             if dr != 0:
-                k = delta_r / dr
+                if delta_r % dr != 0:
+                    return False
+                k = delta_r // dr
             elif dc != 0:
-                k = delta_c / dc
+                if delta_c % dc != 0:
+                    return False
+                k = delta_c // dc
             else:
                 k = 0
-            if not k.is_integer() or (dc * int(k)) != delta_c:
+            if dc * k != delta_c:
                 return False
-            multiples.append(int(k))
+            multiples.append(k)
         multiples.sort()
         for i in range(1, len(multiples)):
             if multiples[i] - multiples[i - 1] != 1:
                 return False
         return True
+
+    @staticmethod
+    def are_marbles_in_allowed_pattern(marble_coords: list) -> bool:
+        """
+        Checks if three marbles are in one of the allowed patterns.
+        """
+        if len(marble_coords) != 3:
+            return True
+        def parse_coord(coord: str):
+            return coord[0].upper(), int(coord[1:])
+        coords = sorted([parse_coord(c) for c in marble_coords], key=lambda x: (x[0], x[1]))
+        m0, m1, m2 = coords
+        if (m0[0] == m1[0] and m0[1] == m1[1] - 1 and
+            m2[0] == chr(ord(m1[0]) + 1) and m2[1] == m1[1]):
+            return True
+        if (m0[0] == chr(ord(m1[0]) - 1) and m0[1] == m1[1] and
+            m2[0] == chr(ord(m1[0]) + 1) and m2[1] == m1[1]):
+            return True
+        if (m0[0] == chr(ord(m1[0]) - 1) and m0[1] == m1[1] - 1 and
+            m2[0] == chr(ord(m1[0]) + 1) and m2[1] == m1[1] + 1):
+            return True
+        return False
 
     @staticmethod
     def validate_move_directions(source_list: list, dest_list: list) -> str:
@@ -159,6 +179,8 @@ class Move:
             raise MoveFormatError("Cannot move more than 3 marbles at once.")
         if len(source_list) > 1 and not Move.are_coordinates_contiguous(source_list):
             raise NonContiguousError("Marbles must be contiguous.")
+        if len(source_list) == 3 and not Move.are_marbles_in_allowed_pattern(source_list):
+            raise ThreeMarblesError("Three marbles must be the allowed patterns")
         direction = Move.get_move_direction(source_list[0], dest_list[0])
         for s, d in zip(source_list[1:], dest_list[1:]):
             if Move.get_move_direction(s, d) != direction:
@@ -169,17 +191,13 @@ class Move:
     def parse_move_input(move_str: str) -> tuple:
         """
         Parses the move command input into source and destination lists.
-
-        :param move_str: a string representing the move command.
-        :return: a tuple (source_list, dest_list).
         """
         move_str = move_str.replace(" ", "").upper()
         parts = move_str.split(",")
         if len(parts) != 2:
             raise MoveFormatError("Invalid move format.")
-        source_str, dest_str = parts
-        source_list = re.findall(r"[A-Z]\d+", source_str)
-        dest_list = re.findall(r"[A-Z]\d+", dest_str)
+        source_list = re.findall(r"[A-Z]\d+", parts[0])
+        dest_list = re.findall(r"[A-Z]\d+", parts[1])
         if not source_list or not dest_list:
             raise MoveFormatError("Coordinates are not in the correct format.")
         return source_list, dest_list
@@ -226,9 +244,7 @@ class Move:
         dr, dc = Move.DIRECTION_VECTORS[direction]
         row = coord[0]
         col = int(coord[1:])
-        new_row = chr(ord(row) + dr)
-        new_col = col + dc
-        new_coord = f"{new_row}{new_col}"
+        new_coord = f"{chr(ord(row) + dr)}{col + dc}"
         if new_coord not in board:
             raise BoardBoundaryError("Out of board boundaries.")
         return new_coord
@@ -252,7 +268,7 @@ class Move:
     @staticmethod
     def are_marbles_collinear(marble_coords: list) -> bool:
         """
-        Returns True if the given three marbles are collinear.
+        Returns True if the given marbles are collinear.
         """
         if len(marble_coords) <= 2:
             return True
@@ -276,7 +292,6 @@ class Move:
         :raises OverlapError, PushNotAllowedError, MoveError: errors
         """
         score = 0
-
         if len(marble_coords) == 3 and not Move.are_marbles_collinear(marble_coords):
             raise NonCollinearError("Three marbles must be collinear to move.")
 
@@ -298,14 +313,11 @@ class Move:
                 raise InlineMovementError("Push moves require an inline formation of marbles.")
             opponent_chain = []
             current = destinations[lead]
-            while True:
-                if board.get(current, "Blank") == opponent_marble:
-                    opponent_chain.append(current)
-                    try:
-                        current = Move.transform_coordinate(current, direction, board)
-                    except BoardBoundaryError:
-                        break
-                else:
+            while board.get(current, "Blank") == opponent_marble:
+                opponent_chain.append(current)
+                try:
+                    current = Move.transform_coordinate(current, direction, board)
+                except BoardBoundaryError:
                     break
             if len(marble_coords) <= len(opponent_chain):
                 raise PushNotAllowedError("Insufficient numbers for push move.")
