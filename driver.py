@@ -111,6 +111,7 @@ total_pause_duration = 0  # Tracks the total time the game has been paused
 total_game_time = None
 game_start_time = None
 game_time = 0
+previous_board = None # Saved previous board state for undo
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -443,15 +444,20 @@ def configure_button(button, bg_color, fg_color="white", active_bg=None, active_
 
 
 def undo_move():
-    global used_board, current_board
+    global used_board, current_board, previous_board
 
     # Check if the game is paused
     if is_paused:
         messagebox.showinfo("Game Paused", "The game is paused. Resume the game to undo moves.")
         return
 
-    current_board = copy.deepcopy(used_board)
-    draw_board(current_board)
+    # Check if there is a previous board state saved
+    if previous_board:
+        current_board = previous_board
+        previous_board = None # Prevent player from undo twice
+        draw_board(current_board)
+    else:
+        messagebox.showinfo("Undo", "You can only undo a move once.")
 
 
 def display_ai_move_log(move):
@@ -489,7 +495,10 @@ def process_generate_all_next_moves():
                                       f"Board configurations saved.")
 
 def process_move_command():
-    global white_score, black_score
+    global white_score, black_score, previous_board
+
+    # save a copy of the current board state before the next move is applied
+    previous_board = copy.deepcopy(current_board)
 
     if is_paused:
         messagebox.showinfo("Game Paused", "The game is paused. Resume the game to command.")
