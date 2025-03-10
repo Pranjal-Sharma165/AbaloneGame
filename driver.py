@@ -254,21 +254,25 @@ def change_theme():
     switch_theme()
 
 def reset_game_state():
-    global current_player, move_count, player_times, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time
+    global current_player, move_counts, player_times, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time, theme_mode, move_start_time, previous_board, prev_white_score, prev_black_score
 
     current_player = "Black"
-    move_count = 0
-    move_counts["Black"] = 0
-    move_counts["White"] = 0
+    move_counts = {"Black": 0, "White": 0}
     white_score = 0
     black_score = 0
-    player_times = {"Player 1": [], "Player 2": []}
+    theme_mode = "Light"
     is_paused = False
+    player_times = {"Black": [], "White": []}
+    move_start_time = None
     pause_time = None
+    total_pause_duration = 0  # Tracks the total time the game has been paused
     total_game_time = None
     game_start_time = None
-    total_pause_duration = 0  # Reset the total pause duration
-    move_counter_label.config(text=f"Moves: {move_count}")
+    previous_board = None  # Saved previous board state for undo
+    prev_white_score = None  # Saved white score for previous board state
+    prev_black_score = None  # Saved black score for previous board state
+
+    move_counter_label.config(text=f"Moves: {move_counts}")
     update_turn_display()
     update_total_game_time()
     canvas.delete("all")
@@ -280,7 +284,6 @@ def reset_game():
         Resets the game state and restarts the timer.
     """
     reset_game_state()
-    start_timer()
 
 def stop_game():
     """
@@ -297,7 +300,6 @@ def stop_game():
     command_frame.pack_forget()
     move_history_frame.place_forget()  # Hide the move history frame
     time_history_frame.place_forget()  # Hide the time history frame
-
     # Show the landing page
     start_frame.pack(pady=100)
 
@@ -342,7 +344,6 @@ def update_total_game_time():
 
 def start_timer():
     global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit
-
     if is_paused:
         return
 
@@ -359,14 +360,11 @@ def start_timer():
             total_game_time = time.time() - game_start_time - total_pause_duration
         else:
             total_game_time = time.time() - game_start_time
-    print(move_time_limit)
 
     if move_time_limit != float("inf"):
         root.after(move_time_limit * 1000, time_up)
         return
 
-
-    # timer_label.config(text=f"Time: {int(total_game_time)}s")
     root.after(1000, start_timer)  # Call again after 1 second
 
 
