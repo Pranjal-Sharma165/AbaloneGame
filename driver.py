@@ -456,8 +456,24 @@ def undo_move():
         current_board = previous_board
         previous_board = None # Prevent player from undo twice
         draw_board(current_board)
+        revert_info()
     else:
         messagebox.showinfo("Undo", "You can only undo a move once.")
+
+def revert_info():
+
+    global current_player, move_counts
+
+    # Reverts current player to player of previous turn
+    if current_player == "White":
+        current_player = "Black"
+    else:
+        current_player = "White"
+
+    # Decrements previous players move count
+    move_counts[current_player] -= 1
+    move_counter_label.config(text=f"Moves: {move_counts}")
+    update_turn_display()
 
 
 def display_ai_move_log(move):
