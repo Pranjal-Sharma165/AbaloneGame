@@ -1,4 +1,5 @@
 import tkinter as tk
+from datetime import timedelta
 from tkinter import messagebox, ttk
 import math
 import time
@@ -103,14 +104,13 @@ black_score = 0
 theme_mode = "Light"
 is_paused = False
 player_times = {"Black": [], "White": []}
-start_time = None
+move_start_time = None
 pause_time = None
 max_moves = 20  # Default value
 move_time_limit = float("inf")  # Default: No time limit
 total_pause_duration = 0  # Tracks the total time the game has been paused
 total_game_time = None
 game_start_time = None
-game_time = 0
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -252,7 +252,7 @@ def change_theme():
     switch_theme()
 
 def reset_game_state():
-    global current_player, move_count, player_times, start_time, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time
+    global current_player, move_count, player_times, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time
 
     current_player = "Black"
     move_count = 0
@@ -261,7 +261,6 @@ def reset_game_state():
     white_score = 0
     black_score = 0
     player_times = {"Player 1": [], "Player 2": []}
-    start_time = None
     is_paused = False
     pause_time = None
     total_game_time = None
@@ -269,6 +268,7 @@ def reset_game_state():
     total_pause_duration = 0  # Reset the total pause duration
     move_counter_label.config(text=f"Moves: {move_count}")
     update_turn_display()
+    update_total_game_time()
     canvas.delete("all")
     current_board = copy.deepcopy(used_board)
     draw_board(current_board)
@@ -301,7 +301,7 @@ def stop_game():
 
 
 def toggle_pause():
-    global is_paused, pause_time, start_time, total_pause_duration
+    global is_paused, pause_time, move_start_time, total_pause_duration
 
     if is_paused:
         is_paused = False
@@ -312,8 +312,7 @@ def toggle_pause():
             pause_duration = time.time() - pause_time
             total_pause_duration += pause_duration  # Accumulate pause duration
 
-            # Adjust start_time to maintain correct move timing
-            start_time += pause_duration
+            move_start_time += pause_duration
 
         pause_time = None
 
@@ -324,21 +323,29 @@ def toggle_pause():
         is_paused = True
         configure_button(pause_button, "#FF6347", "white")
         pause_button.config(text="Resume Game")
-        pause_time = time.time()  # Record pause time
+        pause_time = time.time()
 
         # Disable UI elements
         move_entry.config(state=tk.DISABLED)
         undo_button.config(state=tk.DISABLED)
 
+def update_total_game_time():
+    global game_start_time, is_paused
+
+    root.after(1000, update_total_game_time)
+
+    if game_start_time and not is_paused:
+        elapsed_time = time.time() - game_start_time - total_pause_duration
+        timer_label.config(text=f"Time: {int(elapsed_time)}s")
 
 def start_timer():
-    global start_time, total_game_time, total_pause_duration, pause_time, game_start_time
+    global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit
 
     if is_paused:
-        return  # Stop updating timer while paused
+        return
 
-    if start_time is None:
-        start_time = time.time()  # Start the timer only if it hasn't started
+    if move_start_time is None:
+        move_start_time = time.time()  # Start the timer only if it hasn't started
 
     if total_game_time is None:
         total_game_time = 0
@@ -350,20 +357,29 @@ def start_timer():
             total_game_time = time.time() - game_start_time - total_pause_duration
         else:
             total_game_time = time.time() - game_start_time
+    print(move_time_limit)
 
-    # Correct elapsed move time calculation
-    elapsed_time = time.time() - start_time
+    if move_time_limit != float("inf"):
+        root.after(move_time_limit * 1000, time_up)
+        return
 
-    if move_time_limit != float("inf") and elapsed_time >= move_time_limit:
-        messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
-        end_turn()
-        return  # Stop updating timer after turn ends
 
+    # timer_label.config(text=f"Time: {int(total_game_time)}s")
     root.after(1000, start_timer)  # Call again after 1 second
 
-def end_turn():
-    global current_player, start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time
 
+def time_up():
+    global is_paused, pause_time, total_pause_duration, move_start_time
+    is_paused = True
+    pause_time = time.time()
+    messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
+    pause_duration = time.time() - pause_time
+    total_pause_duration += pause_duration
+    move_start_time += pause_duration
+    end_turn()
+
+def update_move():
+    global move_counts, max_moves, current_player
     # Calculate total moves played by both players
     total_moves_played = move_counts['Black'] + move_counts['White']
 
@@ -378,25 +394,27 @@ def end_turn():
 
     # Update the move counter label
     move_counter_label.config(text=f"Moves: {move_counts}")
+    end_turn()
 
-    # Calculate move duration and update logs
-    if start_time is not None:
-        move_duration = time.time() - start_time
+def end_turn():
+    global current_player, move_start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time
+
+    if move_start_time is not None:
+        move_duration = time.time() - move_start_time
         total_game_time = time.time() - game_start_time - total_pause_duration
         display_turn_duration_log(current_player, move_duration)
 
-        # Reset start_time for the next move
-        start_time = time.time()
+        move_start_time = time.time()
 
-    # Switch to the next player
     current_player = "White" if current_player == "Black" else "Black"
     is_paused = False
     pause_time = None
     update_turn_display()
+    start_timer()
 
 
 def start_game():
-    global game_start_time, total_pause_duration, is_paused, start_time, game_start_time, max_moves
+    global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit
 
     try:
         max_moves = int(max_moves_entry.get())
@@ -404,10 +422,16 @@ def start_game():
         messagebox.showerror("Invalid Input", "Please enter a valid number for max moves.")
         return
 
-    game_start_time = time.time()
+    move_time_limit = time_limit_entry.get()
+
+    if move_time_limit.isdigit():
+        move_time_limit = int(move_time_limit)
+    else:
+        move_time_limit = float("inf")
+
     total_pause_duration = 0
     is_paused = False
-    start_time = time.time()
+    move_start_time = time.time()
     game_start_time = time.time()
 
     pause_button.config(state=tk.NORMAL, text="Pause Game")
@@ -443,7 +467,7 @@ def configure_button(button, bg_color, fg_color="white", active_bg=None, active_
 
 
 def undo_move():
-    global used_board, current_board
+    global used_board, current_board, is_paused
 
     # Check if the game is paused
     if is_paused:
@@ -489,7 +513,7 @@ def process_generate_all_next_moves():
                                       f"Board configurations saved.")
 
 def process_move_command():
-    global white_score, black_score
+    global white_score, black_score, is_paused
 
     if is_paused:
         messagebox.showinfo("Game Paused", "The game is paused. Resume the game to command.")
@@ -530,17 +554,11 @@ def process_move_command():
 
         display_ai_move_log(move_text)
         draw_board(current_board)
-        end_turn()
+        update_move()
     except (MoveError, PushNotAllowedError) as e:
         messagebox.showerror("Invalid Move", str(e))
     finally:
         move_entry.delete(0, tk.END)
-
-def update_total_game_time():
-    if game_start_time and not is_paused:
-        elapsed_time = time.time() - game_start_time - total_pause_duration
-        timer_label.config(text=f"Time: {int(elapsed_time)}s")
-    root.after(1000, update_total_game_time)  # Update every second
 
 
 if __name__ == '__main__':
