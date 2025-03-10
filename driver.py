@@ -92,8 +92,11 @@ current_mode = "Player VS Computer"
 
 # Set up the Tkinter root window for the game
 root = tk.Tk()
+width = root.winfo_screenwidth()
+height = root.winfo_screenheight()
+root.geometry("%dx%d" % (width, height))
 root.title("Abalone Game")
-root.geometry("1000x800")
+# root.geometry("1000x800")
 
 # Global variables for tracking the game state
 current_player = "Black"
@@ -621,7 +624,9 @@ def process_move_command():
         draw_board(current_board)
         update_move()
     except (MoveError, PushNotAllowedError) as e:
+        toggle_pause()
         messagebox.showerror("Invalid Move", str(e))
+        toggle_pause()
     finally:
         move_entry.delete(0, tk.END)
 
@@ -802,16 +807,17 @@ if __name__ == '__main__':
 
 
     command_frame = tk.Frame(root, bg=THEME["bg"])
-    move_label = tk.Label(command_frame, text="Enter your Command:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
-    move_label.pack(pady=5)
+    #move_label = tk.Label(command_frame, text="Enter your Command:", bg=THEME["bg"], fg=THEME["text"], font=("Arial", 12))
+    #move_label.pack(pady=5)
     entry_frame = tk.Frame(command_frame, bg=THEME["bg"])
     entry_frame.pack(pady=3)
-    move_entry = tk.Entry(entry_frame, width=50, font=("Arial", 12))
+    move_entry = tk.Entry(entry_frame, width=34, font=("Arial", 18, "bold"))
+    move_entry.insert(0, "Enter your moves here")
+    move_entry.bind("<Button-1>", lambda event: move_entry.delete(0,tk.END))
     move_entry.pack(side="left", padx=5)
 
     move_entry.bind("<Return>", lambda event: process_move_command())
 
     # move_button = tk.Button(entry_frame, text="Move", command=process_move_command, font=("Arial", 12), bg=THEME["btn_bg"], fg=THEME["btn_fg"])
     # move_button.pack(side="left", padx=5)
-
     root.mainloop()
