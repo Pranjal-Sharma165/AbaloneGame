@@ -114,6 +114,7 @@ previous_board = None # Saved previous board state for undo
 prev_white_score = None # Saved white score for previous board state
 prev_black_score = None # Saved black score for previous board state
 is_running = False
+message_timer = None
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -275,26 +276,31 @@ def reset_game_state():
 
     move_counter_label.config(text=f"Moves: {move_counts}")
     update_turn_display()
-    update_total_game_time()
     canvas.delete("all")
     current_board = copy.deepcopy(used_board)
     draw_board(current_board)
+
 
 def reset_game():
     """
         Resets the game state and restarts the timer.
     """
-    global is_running
+    global is_running, time_history_text, move_history_text
     is_running = True
     reset_game_state()
+    update_total_game_time()
+    start_timer()
 
 def stop_game():
     """
     Stops the game, resets the state, and hides game elements to return to the start screen.
     """
-    global is_running
+    global is_running, message_timer
     is_running = False
     reset_game_state()
+
+    if message_timer is not None:
+        start_frame.after_cancel(message_timer)
 
     # Hide all game-related frames
     top_frame.pack_forget()
@@ -350,7 +356,7 @@ def update_total_game_time():
         timer_label.config(text=f"Time: {int(elapsed_time)}s")
 
 def start_timer():
-    global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit, is_running
+    global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit, is_running, message_timer
     if is_paused or not is_running:
         return
 
@@ -369,7 +375,7 @@ def start_timer():
             total_game_time = time.time() - game_start_time
 
     if move_time_limit != float("inf"):
-        root.after(move_time_limit * 1000, time_up)
+        message_timer = root.after(move_time_limit * 1000, time_up)
         return
 
     root.after(1000, start_timer)  # Call again after 1 second
@@ -379,7 +385,6 @@ def time_up():
     global is_paused, pause_time, total_pause_duration, move_start_time, is_running
     if not is_running:
         return
-
     is_paused = True
     pause_time = time.time()
     messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
