@@ -488,13 +488,25 @@ def revert_info():
     black_score = black_score if black_score == prev_black_score else black_score - 1
     black_score_label.config(text=f"Black Marbles Lost: {black_score}")
 
+    # Append (undone) tag to previous entry in move history log
+    move_history_text.config(state="normal")  # Enable editing
+    move_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
+    move_history_text.see(tk.END)  # Scroll to the bottom
+    move_history_text.config(state="disabled")  # Disable editing
+
+    # Append (undone) tag to previous entry in time history log
+    time_history_text.config(state="normal")  # Enable editing
+    time_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
+    time_history_text.see(tk.END)  # Scroll to the bottom
+    time_history_text.config(state="disabled")  # Disable editing
+
 
 def display_ai_move_log(move):
     """
     Updates the move history display with the latest move.
     """
     move_history_text.config(state="normal")  # Enable editing
-    move_history_text.insert(tk.END, f"{move}\n")  # Append the move
+    move_history_text.insert(tk.END, f"{current_player}: {move}\n")  # Append the move
     move_history_text.see(tk.END)  # Scroll to the bottom
     move_history_text.config(state="disabled")  # Disable editing
 
