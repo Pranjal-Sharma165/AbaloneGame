@@ -113,6 +113,7 @@ game_start_time = None
 previous_board = None # Saved previous board state for undo
 prev_white_score = None # Saved white score for previous board state
 prev_black_score = None # Saved black score for previous board state
+is_running = False
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -283,12 +284,16 @@ def reset_game():
     """
         Resets the game state and restarts the timer.
     """
+    global is_running
+    is_running = True
     reset_game_state()
 
 def stop_game():
     """
     Stops the game, resets the state, and hides game elements to return to the start screen.
     """
+    global is_running
+    is_running = False
     reset_game_state()
 
     # Hide all game-related frames
@@ -334,7 +339,9 @@ def toggle_pause():
         undo_button.config(state=tk.DISABLED)
 
 def update_total_game_time():
-    global game_start_time, is_paused
+    global game_start_time, is_paused, is_running
+    if not is_running:
+        return
 
     root.after(1000, update_total_game_time)
 
@@ -343,8 +350,8 @@ def update_total_game_time():
         timer_label.config(text=f"Time: {int(elapsed_time)}s")
 
 def start_timer():
-    global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit
-    if is_paused:
+    global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit, is_running
+    if is_paused or not is_running:
         return
 
     if move_start_time is None:
@@ -369,7 +376,10 @@ def start_timer():
 
 
 def time_up():
-    global is_paused, pause_time, total_pause_duration, move_start_time
+    global is_paused, pause_time, total_pause_duration, move_start_time, is_running
+    if not is_running:
+        return
+
     is_paused = True
     pause_time = time.time()
     messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
@@ -414,7 +424,7 @@ def end_turn():
 
 
 def start_game():
-    global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit
+    global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit, is_running
 
     try:
         max_moves = int(max_moves_entry.get())
@@ -435,6 +445,7 @@ def start_game():
     game_start_time = time.time()
 
     pause_button.config(state=tk.NORMAL, text="Pause Game")
+    is_running = True
     update_total_game_time()
 
     start_frame.pack_forget()
