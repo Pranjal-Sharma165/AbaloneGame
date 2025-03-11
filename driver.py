@@ -277,6 +277,21 @@ def reset_game_state():
     prev_white_score = None  # Saved white score for previous board state
     prev_black_score = None  # Saved black score for previous board state
 
+    if message_timer is not None:
+        start_frame.after_cancel(message_timer)
+
+    if time_history_text.winfo_exists():
+        time_history_text.config(state="normal")
+        time_history_text.get('1.0', tk.END)
+        time_history_text.delete('1.0', tk.END)
+        time_history_text.config(state="disabled")
+
+    if move_history_text.winfo_exists():
+        move_history_text.config(state="normal")
+        move_history_text.get('1.0', tk.END)
+        move_history_text.delete('1.0', tk.END)
+        move_history_text.config(state="disabled")
+
     move_counter_label.config(text=f"Moves: {move_counts}")
     update_turn_display()
     canvas.delete("all")
@@ -302,8 +317,6 @@ def stop_game():
     is_running = False
     reset_game_state()
 
-    if message_timer is not None:
-        start_frame.after_cancel(message_timer)
 
     # Hide all game-related frames
     top_frame.pack_forget()
