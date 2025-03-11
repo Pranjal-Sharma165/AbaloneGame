@@ -118,6 +118,9 @@ prev_white_score = None # Saved white score for previous board state
 prev_black_score = None # Saved black score for previous board state
 is_running = False
 message_timer = None
+player1_time_entry = None
+player2_time_entry = None
+global game_mode_box
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -399,8 +402,14 @@ def start_timer():
 
 def time_up():
     global is_paused, pause_time, total_pause_duration, move_start_time, is_running
+
     if not is_running:
         return
+
+    # If the time is infinite, do not trigger timeout
+    if move_time_limit == float("inf"):
+        return
+
     is_paused = True
     pause_time = time.time()
     messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
@@ -408,6 +417,7 @@ def time_up():
     total_pause_duration += pause_duration
     move_start_time += pause_duration
     end_turn()
+
 
 def update_move():
     global move_counts, max_moves, current_player
@@ -453,12 +463,35 @@ def start_game():
         messagebox.showerror("Invalid Input", "Please enter a valid number for max moves.")
         return
 
-    move_time_limit = time_limit_entry.get()
+    # Ensure game_mode_box exists before using it
+    if 'game_mode_box' not in globals():
+        messagebox.showerror("Error", "Game Mode selection is missing!")
+        return
 
-    if move_time_limit.isdigit():
-        move_time_limit = int(move_time_limit)
-    else:
-        move_time_limit = float("inf")
+    try:
+        selected_mode = game_mode_box.get()
+    except Exception as e:
+        messagebox.showerror("Error", f"Game Mode selection is missing! ({str(e)})")
+        return
+
+    if selected_mode not in ["Computer VS Player", "Player VS Player", "Computer VS Computer"]:
+        messagebox.showerror("Invalid Input", "Please select a valid game mode.")
+        return
+
+    # Extract time limits
+    time_player1 = player1_time_entry.get().strip().lower() if player1_time_entry else "i"
+    time_player2 = player2_time_entry.get().strip().lower() if player2_time_entry else "i"
+
+    # Convert time to int or set to infinity if "i" is entered
+    time_player1 = int(time_player1) if time_player1.isdigit() else float("inf") if time_player1 == "i" else None
+    time_player2 = int(time_player2) if time_player2.isdigit() else float("inf") if time_player2 == "i" else None
+
+    # Validate input
+    if time_player1 is None or time_player2 is None:
+        messagebox.showerror("Invalid Input", "Please enter a valid number or 'i' for infinite time.")
+        return
+
+    # Now use these values in your game logic
 
     total_pause_duration = 0
     is_paused = False
@@ -470,7 +503,6 @@ def start_game():
     update_total_game_time()
 
     start_frame.pack_forget()
-
     top_frame.pack(ipady=5, pady=3)
     status_frame.pack(pady=5, ipadx=254)
     canvas.pack()
@@ -481,6 +513,8 @@ def start_game():
     draw_board(current_board)
     start_timer()
     command_frame.pack(ipadx=28, ipady=10)
+
+
 
 
 def exit_game():
@@ -644,6 +678,59 @@ def process_move_command():
         move_entry.delete(0, tk.END)
 
 
+def update_time_fields(event=None):
+    global player1_time_entry, player2_time_entry, time_player1_label, time_player2_label
+
+    selected_mode = game_mode_box.get()
+
+    # If labels and entries don't exist, create them once
+    if 'time_player1_label' not in globals():
+        time_player1_label = tk.Label(start_frame, text="")
+        player1_time_entry = tk.Entry(start_frame)
+
+        time_player2_label = tk.Label(start_frame, text="")
+        player2_time_entry = tk.Entry(start_frame)
+
+    # Remove any existing time fields (prevents duplication)
+    time_player1_label.pack_forget()
+    player1_time_entry.pack_forget()
+    time_player2_label.pack_forget()
+    player2_time_entry.pack_forget()
+
+    # Insert time fields **right after the "Max Moves Per Player" field**.
+    insert_index = start_frame.pack_slaves().index(max_moves_entry) + 1
+
+    if selected_mode == "Computer VS Player":
+        time_player1_label.config(text="Time for Computer (seconds):")
+        time_player1_label.pack(pady=5, after=max_moves_entry)
+        player1_time_entry.pack(pady=5, after=time_player1_label)
+
+        time_player2_label.config(text="Time for Player 1 (seconds):")
+        time_player2_label.pack(pady=5, after=player1_time_entry)
+        player2_time_entry.pack(pady=5, after=time_player2_label)
+
+    elif selected_mode == "Player VS Player":
+        time_player1_label.config(text="Time for Player 1 (seconds):")
+        time_player1_label.pack(pady=5, after=max_moves_entry)
+        player1_time_entry.pack(pady=5, after=time_player1_label)
+
+        time_player2_label.config(text="Time for Player 2 (seconds):")
+        time_player2_label.pack(pady=5, after=player1_time_entry)
+        player2_time_entry.pack(pady=5, after=time_player2_label)
+
+    elif selected_mode == "Computer VS Computer":
+        time_player1_label.config(text="Time for Computer 1 (seconds):")
+        time_player1_label.pack(pady=5, after=max_moves_entry)
+        player1_time_entry.pack(pady=5, after=time_player1_label)
+
+        time_player2_label.config(text="Time for Computer 2 (seconds):")
+        time_player2_label.pack(pady=5, after=player1_time_entry)
+        player2_time_entry.pack(pady=5, after=time_player2_label)
+
+
+
+
+
 if __name__ == '__main__':
     command_entry = tk.Entry(root)
 
@@ -666,14 +753,17 @@ if __name__ == '__main__':
     # Calling setup_board_layout function to change the board layout
     board_layout_box.bind("<<ComboboxSelected>>", setup_board_layout)
 
-    # Creating game mode label
     game_mode_label = tk.Label(start_frame, text="Game Mode: ")
     game_mode_label.pack(pady=10)
 
-    #Creating game mode box
-    game_mode_box = ttk.Combobox(start_frame, state = "readonly", values = ["Computer VS Player", "Player VS Player", "Computer VS Computer"])
+    game_mode_box = ttk.Combobox(start_frame, state="readonly",
+                                 values=["Computer VS Player", "Player VS Player", "Computer VS Computer"])
     game_mode_box.pack(pady=5)
-    game_mode_box.set("Computer VS Player")
+    game_mode_box.set("Computer VS Player")  # Default value
+
+    # Bind event to update fields when changing mode
+    game_mode_box.bind("<<ComboboxSelected>>", update_time_fields)
+
 
     # Creating label and entry for max moves allowed
     max_moves_label = tk.Label(start_frame, text="Max Moves Per Player:", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
@@ -683,13 +773,7 @@ if __name__ == '__main__':
     max_moves_entry.pack(pady=5)
     max_moves_entry.insert(0, "20")  # Default value
 
-    # Creating label and entry for time limit per move
-    time_limit_label = tk.Label(start_frame, text="Time Limit Per Move (seconds)(i for ∞):", font=("Arial", 12), bg=THEME["bg"], fg=THEME["text"])
-    time_limit_label.pack(pady=10)
-
-    time_limit_entry = tk.Entry(start_frame, font=("Arial", 12))
-    time_limit_entry.pack(pady=5)
-    time_limit_entry.insert(0, "i")  # Default to infinity
+    update_time_fields(None)
 
     start_button = tk.Button(start_frame, text="Start Game", command=start_game, font=("Arial", 14), bg=THEME["btn_bg"], fg=THEME["btn_fg"], relief="raised", bd=2)
     start_button.pack(pady=10)
