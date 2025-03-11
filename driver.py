@@ -259,7 +259,7 @@ def change_theme():
     switch_theme()
 
 def reset_game_state():
-    global current_player, move_counts, player_times, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time, theme_mode, move_start_time, previous_board, prev_white_score, prev_black_score
+    global current_player, move_counts, player_times, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time, theme_mode, move_start_time, previous_board, prev_white_score, prev_black_score, message_timer
 
     current_player = "Black"
     move_counts = {"Black": 0, "White": 0}
@@ -313,7 +313,7 @@ def stop_game():
     """
     Stops the game, resets the state, and hides game elements to return to the start screen.
     """
-    global is_running, message_timer
+    global is_running
     is_running = False
     reset_game_state()
 
