@@ -38,8 +38,11 @@ class NextMove:
         for size in [1, 2, 3]:
             for combo in itertools.combinations(all_positions, size):
                 combo_list = list(combo)
-                if Move.are_coordinates_contiguous(combo_list):
-                    groups.add(tuple(sorted(combo_list)))
+                if not Move.are_coordinates_contiguous(combo_list):
+                    continue
+                if size == 3 and not Move.are_marbles_in_allowed_pattern(combo_list):
+                    continue
+                groups.add(tuple(sorted(combo_list)))
         return list(groups)
 
     @staticmethod
