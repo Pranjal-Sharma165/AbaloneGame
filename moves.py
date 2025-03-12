@@ -80,7 +80,7 @@ class Move:
         return [f"{chr(ord(row) + dr)}{col + dc}" for dr, dc in Move.DIRECTION_VECTORS.values()]
 
     @staticmethod
-    def are_coordinates_contiguous(coords: list) -> bool:
+    def are_coordinates_contiguous(coords: list or tuple) -> bool:
         """
         Checks if the given coordinates form a contiguous group.
         """
@@ -108,7 +108,7 @@ class Move:
         return len(visited) == len(coords)
 
     @staticmethod
-    def are_marbles_aligned(marble_coords: list, direction: str) -> bool:
+    def are_marbles_aligned(marble_coords: list or tuple, direction: str) -> bool:
         """
         Checks if the marbles are on a straight line
         """
@@ -143,7 +143,7 @@ class Move:
         return True
 
     @staticmethod
-    def are_marbles_in_allowed_pattern(marble_coords: list) -> bool:
+    def are_marbles_in_allowed_pattern(marble_coords: list or tuple) -> bool:
         """
         Checks if three marbles are in one of the allowed patterns.
         """
@@ -355,3 +355,7 @@ class Move:
             for coord in marble_coords:
                 board[destinations[coord]] = player_marble
             return score
+
+if __name__ == "__main__":
+    #cleaning cache memory
+    Move.get_neighbors.cache_clear()

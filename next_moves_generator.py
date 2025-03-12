@@ -10,50 +10,48 @@ class NoLegalMovesError(Exception):
     pass
 
 class NextMove:
+    DIRECTION_VECTORS = {
+        "upper_left": (1, 0),
+        "upper_right": (1, 1),
+        "left": (0, -1),
+        "right": (0, 1),
+        "down_left": (-1, -1),
+        "down_right": (-1, 0)
+    }
+
     @staticmethod
     def board_to_canonical_string(_board: dict, _turn: str) -> str:
-        black_coords = []
-        white_coords = []
-        for coord, cell in _board.items():
-            if cell == BoardIO.NO_MARBLE:
-                continue
-            if cell == BoardIO.BLACK_MARBLE:
-                black_coords.append(coord)
-            elif cell == BoardIO.WHITE_MARBLE:
-                white_coords.append(coord)
-
-        def sort_key(c):
-            return c[0], int(c[1:])
+        black_coords = [coord for coord, cell in _board.items() if cell == BoardIO.BLACK_MARBLE]
+        white_coords = [coord for coord, cell in _board.items() if cell == BoardIO.WHITE_MARBLE]
+        sort_key = lambda c: (c[0], int(c[1:]))
         black_coords.sort(key=sort_key)
         white_coords.sort(key=sort_key)
-        black_tokens = [f"{c}b" for c in black_coords]
-        white_tokens = [f"{c}w" for c in white_coords]
-        tokens_line = ",".join(black_tokens + white_tokens)
+        tokens_line = ",".join([f"{c}b" for c in black_coords] + [f"{c}w" for c in white_coords])
         return tokens_line
 
     @staticmethod
     def find_all_groups_of_size_1_2_3(_board: dict, color: str) -> list:
         all_positions = [coord for coord, val in _board.items() if val == color]
         groups = set()
-        for size in [1, 2, 3]:
+        for size in (1, 2, 3):
             for combo in itertools.combinations(all_positions, size):
-                combo_list = list(combo)
-                if not Move.are_coordinates_contiguous(combo_list):
-                    continue
-                if size == 3 and not Move.are_marbles_in_allowed_pattern(combo_list):
-                    continue
-                groups.add(tuple(sorted(combo_list)))
+                combo_sorted = tuple(sorted(combo))
+                if size < 3:
+                    if Move.are_coordinates_contiguous(combo_sorted):
+                        groups.add(combo_sorted)
+                else:
+                    if any(Move.are_marbles_aligned(combo_sorted, d) for d in NextMove.DIRECTION_VECTORS) and \
+                       Move.are_coordinates_contiguous(combo_sorted):
+                        groups.add(combo_sorted)
         return list(groups)
 
     @staticmethod
     def generate_move_notation(marble_coords: list, direction: str) -> str:
         source_str = "".join(sorted(marble_coords))
-        dest_coords = []
-        for c in marble_coords:
-            dr, dc = Move.DIRECTION_VECTORS[direction]
-            new_row = chr(ord(c[0]) + dr)
-            new_col = int(c[1:]) + dc
-            dest_coords.append(f"{new_row}{new_col}")
+        dest_coords = [
+            f"{chr(ord(c[0]) + Move.DIRECTION_VECTORS[direction][0])}{int(c[1:]) + Move.DIRECTION_VECTORS[direction][1]}"
+            for c in marble_coords
+        ]
         dest_str = "".join(sorted(dest_coords))
         return f"{source_str},{dest_str}"
 
@@ -85,27 +83,25 @@ class NextMove:
     @staticmethod
     def save_legal_move_notations(_moves: list, _output_filename: str) -> None:
         with open(_output_filename, "w") as f:
-            for notation, canon in _moves:
-                f.write(notation + "\n")
+            f.write("\n".join(notation for notation, _ in _moves) + "\n")
 
     @staticmethod
     def save_board_configurations(_moves: list, _output_filename: str) -> None:
         with open(_output_filename, "w") as f:
-            for notation, canon in _moves:
-                f.write(canon + "\n")
+            f.write("\n".join(canon for _, canon in _moves) + "\n")
 
     @staticmethod
     def generate_and_save_all_next_moves(_board: dict, color: str, _turn: str,
                                            _moves_filename: str, _boards_filename: str) -> list:
-        _moves = NextMove.generate_all_next_moves(_board, color, _turn)
-        NextMove.save_legal_move_notations(_moves, _moves_filename)
-        NextMove.save_board_configurations(_moves, _boards_filename)
-        return _moves
+        moves = NextMove.generate_all_next_moves(_board, color, _turn)
+        NextMove.save_legal_move_notations(moves, _moves_filename)
+        NextMove.save_board_configurations(moves, _boards_filename)
+        return moves
 
 if __name__ == "__main__":
     input_filename = sys.argv[1]
     output_filename = input_filename[:-6]
-    a = time.time()
+    start_time = time.time()
     board, turn = BoardIO.import_current_text_to_board(input_filename)
     current_color = BoardIO.BLACK_MARBLE if turn == "Black" else BoardIO.WHITE_MARBLE
 
@@ -114,5 +110,4 @@ if __name__ == "__main__":
 
     moves = NextMove.generate_and_save_all_next_moves(board, current_color, turn,
                                                       moves_filename, boards_filename)
-    b = time.time()
-    print(f"time taken: {b - a} seconds")
+    print(f"time taken: {time.time() - start_time} seconds")

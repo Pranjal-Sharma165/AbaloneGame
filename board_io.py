@@ -25,21 +25,12 @@ class BoardIO:
         :param filename: The filename where the board configuration will be saved.
         """
         turn_letter = "b" if current_player.lower() == "black" else "w"
-        black_coords = []
-        white_coords = []
-        for coord, cell in board.items():
-            if cell == "Blank":
-                continue
-            if cell == "#8A8A8A":
-                black_coords.append(coord)
-            elif cell == "#D9D9D9":
-                white_coords.append(coord)
-
-        black_coords.sort(key=lambda c: (c[0], int(c[1:])))
-        white_coords.sort(key=lambda c: (c[0], int(c[1:])))
-        black_tokens = [f"{c}b" for c in black_coords]
-        white_tokens = [f"{c}w" for c in white_coords]
-        token_line = ",".join(black_tokens + white_tokens)
+        black_coords = [coord for coord, cell in board.items() if cell == BoardIO.BLACK_MARBLE]
+        white_coords = [coord for coord, cell in board.items() if cell == BoardIO.WHITE_MARBLE]
+        sort_key = lambda c: (c[0], int(c[1:]))
+        black_coords.sort(key=sort_key)
+        white_coords.sort(key=sort_key)
+        token_line = ",".join([f"{c}b" for c in black_coords] + [f"{c}w" for c in white_coords])
         with open(filename, "w") as f:
             f.write(turn_letter + "\n")
             f.write(token_line)
@@ -52,28 +43,20 @@ class BoardIO:
         :param filename: The filename from which to load the board configuration.
         :return: A tuple (board, turn) where board is a dictionary representing the board state, and turn is a string ("Black" or "White").
         """
-        board = {coord: "Blank" for coord in BoardIO.BOARD_SAMPLE.keys()}
+        board = {coord: BoardIO.NO_MARBLE for coord in BoardIO.BOARD_SAMPLE.keys()}
         with open(filename, "r") as f:
             lines = f.read().splitlines()
         turn_line = lines[0].strip()
         tokens_line = lines[1].strip()
-        if turn_line == "b":
-            turn = "Black"
-        elif turn_line == "w":
-            turn = "White"
-        else:
-            turn = "Black"
-
-        tokens = tokens_line.split(",")
-        for token in tokens:
+        turn = "Black" if turn_line == "b" else "White" if turn_line == "w" else "Black"
+        for token in tokens_line.split(","):
             if len(token) < 2:
                 continue
-            coord = token[:-1]
-            color_token = token[-1]
+            coord, color_token = token[:-1], token[-1]
             if color_token == "b":
-                board[coord] = "#8A8A8A"
+                board[coord] = BoardIO.BLACK_MARBLE
             elif color_token == "w":
-                board[coord] = "#D9D9D9"
+                board[coord] = BoardIO.WHITE_MARBLE
         return board, turn
 
 
