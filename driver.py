@@ -167,7 +167,7 @@ def add_undo_tag_to_text_file(filename):
 
             with open(filename, "w") as file:
                 file.writelines(lines)
-            print(f"Last line removed successfully.")
+            # print(f"Last line removed successfully.")
         else:
             print("No line to remove.")
     except Exception as e:
@@ -603,7 +603,7 @@ def revert_info():
     to accurately represent the previous board state.
     """
 
-    global current_player, move_counts, white_score, black_score, prev_white_score, prev_black_score, file_move, file_time
+    global current_player, move_counts, white_score, black_score, prev_white_score, prev_black_score, file_move, file_time, move_start_time, total_game_time, game_start_time, total_pause_duration
 
     # Reverts current player to player of previous turn
     current_player = "White" if current_player == "Black" else "Black"
@@ -628,14 +628,24 @@ def revert_info():
     move_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
     move_history_text.see(tk.END)  # Scroll to the bottom
     move_history_text.config(state="disabled")  # Disable editing
-    add_undo_tag_to_text_file("move_history.txt") # Append (undone) tag to move history text file prev turn
+
+    # Append (undone) tag to move history text file prev turn
+    add_undo_tag_to_text_file("move_history.txt")
 
     # Append (undone) tag to previous entry in time history log
     time_history_text.config(state="normal")  # Enable editing
     time_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
     time_history_text.see(tk.END)  # Scroll to the bottom
     time_history_text.config(state="disabled")  # Disable editing
-    add_undo_tag_to_text_file("time_history.txt") # Append (undone) tag to time history text file prev turn
+
+    # Append (undone) tag to time history text file prev turn
+    add_undo_tag_to_text_file("time_history.txt")
+
+    # Reset turn duration and total game timer
+    if move_start_time is not None:
+        total_game_time = move_start_time - game_start_time - total_pause_duration
+        timer_label.config(text=f"Time: {int(total_game_time)}s")
+        move_start_time = time.time()
 
 
 def display_ai_move_log(move):
