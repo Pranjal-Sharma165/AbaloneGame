@@ -376,7 +376,7 @@ def toggle_pause():
 
     if is_paused:
         is_paused = False
-        configure_button(pause_button, THEME["btn_bg"], THEME["btn_fg"])
+        configure_button(pause_button, "#9C27B0", "white")
         pause_button.config(text="Pause Game")
 
         if pause_time is not None:
@@ -439,14 +439,8 @@ def start_timer():
 
 def time_up():
     global is_paused, pause_time, total_pause_duration, move_start_time, is_running
-
     if not is_running:
         return
-
-    # If the time is infinite, do not trigger timeout
-    if move_time_limit == float("inf"):
-        return
-
     is_paused = True
     pause_time = time.time()
     messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Turn is ending.")
@@ -454,7 +448,6 @@ def time_up():
     total_pause_duration += pause_duration
     move_start_time += pause_duration
     end_turn()
-
 
 def update_move():
     global move_counts, max_moves, current_player
@@ -519,17 +512,12 @@ def start_game():
         return
 
     # Extract time limits
-    time_player1 = player1_time_entry.get().strip().lower() if player1_time_entry else "i"
-    time_player2 = player2_time_entry.get().strip().lower() if player2_time_entry else "i"
+    time_player1 = player1_time_entry.get() if player1_time_entry else "i"
+    time_player2 = player2_time_entry.get() if player2_time_entry else "i"
 
-    # Convert time to int or set to infinity if "i" is entered
-    time_player1 = int(time_player1) if time_player1.isdigit() else float("inf") if time_player1 == "i" else None
-    time_player2 = int(time_player2) if time_player2.isdigit() else float("inf") if time_player2 == "i" else None
-
-    # Validate input
-    if time_player1 is None or time_player2 is None:
-        messagebox.showerror("Invalid Input", "Please enter a valid number or 'i' for infinite time.")
-        return
+    # Convert time to int or set to infinity
+    time_player1 = int(time_player1) if time_player1.isdigit() else float("inf")
+    time_player2 = int(time_player2) if time_player2.isdigit() else float("inf")
 
     # Now use these values in your game logic
 
@@ -554,7 +542,7 @@ def start_game():
     start_timer()
     command_frame.pack(ipadx=28, ipady=10)
 
-
+    update_turn_display()
 
 
 def exit_game():
