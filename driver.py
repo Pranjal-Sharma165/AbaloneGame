@@ -659,6 +659,7 @@ def display_ai_move_log(move):
     move_history_text.see(tk.END)  # Scroll to the bottom
     move_history_text.config(state="disabled")  # Disable editing
 
+    # Write move entry into move history text file
     file_move.write(f"{current_player}: {move}\n")
     file_move.flush()
 
@@ -673,6 +674,7 @@ def display_turn_duration_log(player, duration):
     time_history_text.see(tk.END)  # Scroll to the bottom
     time_history_text.config(state="disabled")  # Disable editing
 
+    # Write time entry into time history text file
     file_time.write(f"{player}: {duration:.2f} sec\n")
     file_time.flush()
 
