@@ -175,8 +175,6 @@ class Move:
             raise MoveFormatError("Cannot move more than 3 marbles at once.")
         if len(source_list) > 1 and not Move.are_coordinates_contiguous(source_list):
             raise NonContiguousError("Marbles must be contiguous.")
-        if len(source_list) == 3 and not Move.are_marbles_in_allowed_pattern(source_list):
-            raise ThreeMarblesError("Three marbles must be the allowed patterns")
         direction = Move.get_move_direction(source_list[0], dest_list[0])
         for s, d in zip(source_list[1:], dest_list[1:]):
             if Move.get_move_direction(s, d) != direction:
@@ -268,8 +266,9 @@ class Move:
         """
         if len(marble_coords) <= 2:
             return True
-        if Move.are_marbles_in_allowed_pattern(marble_coords):
-            return True
+        for d in Move.DIRECTION_VECTORS.keys():
+            if Move.are_marbles_aligned(marble_coords, d):
+                return True
         return False
 
     @staticmethod
@@ -301,7 +300,7 @@ class Move:
         if destinations[lead] is None:
             raise BoardBoundaryError("Leading marble cannot move off-board in a normal move.")
 
-        inline = Move.are_marbles_in_allowed_pattern(marble_coords)
+        inline = Move.are_marbles_aligned(marble_coords, direction)
 
         if board.get(destinations[lead], "Blank") == opponent_marble:
             if not inline:
