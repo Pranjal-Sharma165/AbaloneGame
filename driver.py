@@ -121,6 +121,37 @@ message_timer = None
 player1_time_entry = None
 player2_time_entry = None
 global game_mode_box
+file_move = None # Text file variable for move history
+file_time = None # Text file variable for time history
+
+def open_text_files():
+    """
+    Open the move and time history text files to store info.
+    """
+    global file_move, file_time
+    try:
+        file_move = open("move_history.txt", "w")
+        file_time = open("time_history.txt", "w")
+        # print("Files opened successfully")
+    except FileNotFoundError:
+        messagebox.showerror("File not found", "File not found")
+        return
+
+def close_text_files():
+    """
+    Close the move and time history text files.
+    """
+    global file_move, file_time
+
+    if file_move is not None:
+        file_move.close()
+        file_move = None
+        # print("File_move closed")
+
+    if file_time is not None:
+        file_time.close()
+        file_time = None
+        # print("File_time closed")
 
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
@@ -307,6 +338,11 @@ def reset_game():
         Resets the game state and restarts the timer.
     """
     global is_running, time_history_text, move_history_text
+
+    # Re-open text files to log move and time history
+    close_text_files()
+    open_text_files()
+
     is_running = True
     reset_game_state()
     update_total_game_time()
@@ -319,6 +355,7 @@ def stop_game():
     global is_running
     is_running = False
     reset_game_state()
+    close_text_files()
 
 
     # Hide all game-related frames
@@ -457,6 +494,9 @@ def end_turn():
 def start_game():
     global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit, is_running
 
+    # Open text files to store move history and time history
+    open_text_files()
+
     try:
         max_moves = int(max_moves_entry.get())
     except ValueError:
@@ -555,7 +595,7 @@ def revert_info():
     to accurately represent the previous board state.
     """
 
-    global current_player, move_counts, white_score, black_score, prev_white_score, prev_black_score
+    global current_player, move_counts, white_score, black_score, prev_white_score, prev_black_score, file_move, file_time
 
     # Reverts current player to player of previous turn
     current_player = "White" if current_player == "Black" else "Black"
@@ -592,19 +632,29 @@ def display_ai_move_log(move):
     """
     Updates the move history display with the latest move.
     """
+    global file_move
+
     move_history_text.config(state="normal")  # Enable editing
     move_history_text.insert(tk.END, f"{current_player}: {move}\n")  # Append the move
     move_history_text.see(tk.END)  # Scroll to the bottom
     move_history_text.config(state="disabled")  # Disable editing
 
+    file_move.write(f"{current_player}: {move}\n")
+    file_move.flush()
+
 def display_turn_duration_log(player, duration):
     """
     Updates the time history display with the time taken by the player for their move.
     """
+    global file_time
+
     time_history_text.config(state="normal")  # Enable editing
     time_history_text.insert(tk.END, f"{player}: {duration:.2f} sec\n")  # Append the move duration
     time_history_text.see(tk.END)  # Scroll to the bottom
     time_history_text.config(state="disabled")  # Disable editing
+
+    file_time.write(f"{player}: {duration:.2f} sec\n")
+    file_time.flush()
 
 def process_generate_all_next_moves():
     global current_board, current_player, move_counts
