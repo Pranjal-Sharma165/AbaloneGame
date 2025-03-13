@@ -149,20 +149,16 @@ class Move:
         """
         if len(marble_coords) != 3:
             return True
+
         def parse_coord(coord: str):
             return coord[0].upper(), int(coord[1:])
+
         coords = sorted([parse_coord(c) for c in marble_coords], key=lambda x: (x[0], x[1]))
-        m0, m1, m2 = coords
-        if (m0[0] == m1[0] and m0[1] == m1[1] - 1 and
-            m2[0] == chr(ord(m1[0]) + 1) and m2[1] == m1[1]):
-            return True
-        if (m0[0] == chr(ord(m1[0]) - 1) and m0[1] == m1[1] and
-            m2[0] == chr(ord(m1[0]) + 1) and m2[1] == m1[1]):
-            return True
-        if (m0[0] == chr(ord(m1[0]) - 1) and m0[1] == m1[1] - 1 and
-            m2[0] == chr(ord(m1[0]) + 1) and m2[1] == m1[1] + 1):
-            return True
-        return False
+
+        diff1 = (ord(coords[1][0]) - ord(coords[0][0]), coords[1][1] - coords[0][1])
+        diff2 = (ord(coords[2][0]) - ord(coords[1][0]), coords[2][1] - coords[1][1])
+
+        return diff1 == diff2
 
     @staticmethod
     def validate_move_directions(source_list: list, dest_list: list) -> str:
@@ -272,9 +268,8 @@ class Move:
         """
         if len(marble_coords) <= 2:
             return True
-        for d in Move.DIRECTION_VECTORS.keys():
-            if Move.are_marbles_aligned(marble_coords, d):
-                return True
+        if Move.are_marbles_in_allowed_pattern(marble_coords):
+            return True
         return False
 
     @staticmethod
@@ -306,7 +301,7 @@ class Move:
         if destinations[lead] is None:
             raise BoardBoundaryError("Leading marble cannot move off-board in a normal move.")
 
-        inline = Move.are_marbles_aligned(marble_coords, direction)
+        inline = Move.are_marbles_in_allowed_pattern(marble_coords)
 
         if board.get(destinations[lead], "Blank") == opponent_marble:
             if not inline:

@@ -33,16 +33,18 @@ class NextMove:
     def find_all_groups_of_size_1_2_3(_board: dict, color: str) -> list:
         all_positions = [coord for coord, val in _board.items() if val == color]
         groups = set()
-        for size in (1, 2, 3):
+        for size in (1, 2):
             for combo in itertools.combinations(all_positions, size):
                 combo_sorted = tuple(sorted(combo))
-                if size < 3:
+                if size == 1:
+                    groups.add(combo_sorted)
+                elif size == 2:
                     if Move.are_coordinates_contiguous(combo_sorted):
                         groups.add(combo_sorted)
-                else:
-                    if any(Move.are_marbles_aligned(combo_sorted, d) for d in NextMove.DIRECTION_VECTORS) and \
-                       Move.are_coordinates_contiguous(combo_sorted):
-                        groups.add(combo_sorted)
+
+        for combo in itertools.combinations(all_positions, 3):
+                if Move.are_marbles_in_allowed_pattern(combo):
+                    groups.add(combo)
         return list(groups)
 
     @staticmethod
