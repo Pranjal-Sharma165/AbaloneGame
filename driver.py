@@ -153,6 +153,26 @@ def close_text_files():
         file_time = None
         # print("File_time closed")
 
+def add_undo_tag_to_text_file(filename):
+    """
+    Add an undone tag to the undone move in the text file (previous turn).
+    """
+    try:
+        with open(filename, "r") as file:
+            lines = file.readlines()
+
+        if len(lines) > 0:
+            # Append (undone) tag to last line
+            lines[-1] = lines[-1].rstrip() + " " + "(undone)" + "\n"
+
+            with open(filename, "w") as file:
+                file.writelines(lines)
+            print(f"Last line removed successfully.")
+        else:
+            print("No line to remove.")
+    except Exception as e:
+        print(f"Error: {e}")
+
 # Create a deep copy of the board to avoid modifying the original starting setup
 current_board = copy.deepcopy(used_board)
 
@@ -608,12 +628,14 @@ def revert_info():
     move_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
     move_history_text.see(tk.END)  # Scroll to the bottom
     move_history_text.config(state="disabled")  # Disable editing
+    add_undo_tag_to_text_file("move_history.txt") # Append (undone) tag to move history text file prev turn
 
     # Append (undone) tag to previous entry in time history log
     time_history_text.config(state="normal")  # Enable editing
     time_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
     time_history_text.see(tk.END)  # Scroll to the bottom
     time_history_text.config(state="disabled")  # Disable editing
+    add_undo_tag_to_text_file("time_history.txt") # Append (undone) tag to time history text file prev turn
 
 
 def display_ai_move_log(move):
