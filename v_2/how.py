@@ -21,7 +21,7 @@ result = [[[black marbles],[white marbles]], -- board 1
 
 from this point, this result can be sent to a module heuristic functions to take advantage of calculation of linear format(numpy and numba)
 since heuristic function's form is like this, h(x) = w1f1 + w2f2 + w3f3 + w4f4 + ... +wnfn,
-we can make it to this linear algebra format, [w1,w2,w3,w4,w5,...,wn][[f1],[f2],[f3],[f4],[f5],...[fn]]
+we can make it to this linear algebra format, [w1,w2,w3,w4,w5,...,wn][[f1],[f2],[f3],[f4],[f5],...[fn]] -> [1*n][n*1] = 1*1
 There is nothing better than numpy dot product for calculation of equations
 also, all heuristic functions need quantified vales of boards. we don't have to use change letters to values.
 
