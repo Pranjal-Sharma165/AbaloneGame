@@ -1,7 +1,6 @@
-import time
-import numba
-from numba import njit, types
+
 import numpy as np
+
 
 WHITE_MARBLE = "#D9D9D9"
 BLACK_MARBLE = "#8A8A8A"
@@ -15,7 +14,6 @@ DIRECTION_VECTORS = {
     "down_left": (-1, -1),
     "down_right": (-1, 0)
 }
-
 VALID_COORDS = {
     (9, 5), (9, 6), (9, 7), (9, 8), (9, 9),
     (8, 4), (8, 5), (8, 6), (8, 7), (8, 8), (8, 9),
@@ -28,19 +26,15 @@ VALID_COORDS = {
     (1, 1), (1, 2), (1, 3), (1, 4), (1, 5)
 }
 
-VALID_COORDS_ARRAY = np.array(list(VALID_COORDS), dtype=np.int32)
+VALID_COORDS_ARRAY = np.array(list(VALID_COORDS))
 
-
-@njit(cache=True)
 def is_valid_coord(coord):
     for i in range(len(VALID_COORDS_ARRAY)):
         if VALID_COORDS_ARRAY[i, 0] == coord[0] and VALID_COORDS_ARRAY[i, 1] == coord[1]:
             return True
     return False
 
-
 def convert_board_format(board_dict):
-
     black_marbles = []
     white_marbles = []
 
@@ -58,11 +52,11 @@ def convert_board_format(board_dict):
 
     return [black_marbles, white_marbles]
 
-
 def parse_move_input(move_text):
+    source_coords = []
+    dest_coords = []
 
     move_text = move_text.upper().strip()
-
 
     if ',' in move_text:
         parts = [part.strip() for part in move_text.split(',')]
@@ -74,9 +68,6 @@ def parse_move_input(move_text):
                 if move_text[i - 2] != move_text[i]:
                     parts = [move_text[:i], move_text[i:]]
                     break
-
-    source_coords = []
-    dest_coords = []
 
     source_text = parts[0].replace(" ", "")
     for i in range(0, len(source_text), 2):
@@ -99,11 +90,9 @@ def parse_move_input(move_text):
     return [source_coords, dest_coords]
 
 def lists_to_sets(board):
-
     black_set = {tuple(coord) for coord in board[0]}
     white_set = {tuple(coord) for coord in board[1]}
     return [black_set, white_set]
-
 
 def move_validation(source_coords, dest_coords, board, current_player_color):
 
@@ -135,6 +124,7 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
         if coord_tuple not in VALID_COORDS:
             return False, "Destination coordinates must be on the board"
 
+    # Check adjacency for 2-marble groups
     if num_marbles == 2:
         diff_vector = (source_coords[1][0] - source_coords[0][0], source_coords[1][1] - source_coords[0][1])
 
@@ -147,6 +137,7 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
         if not is_adjacent:
             return False, "source marbles must be adjacent"
 
+    # Check if 3-marble groups are in a straight line
     if num_marbles == 3:
         sorted_coords = sorted(source_coords, key=lambda x: (x[0], x[1]))
 
@@ -191,9 +182,9 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
         if dest_tuple in black_marbles_set or dest_tuple in white_marbles_set:
             return False, "destination position must be empty"
 
+    # Multi-marble movement validation
     elif num_marbles == 2 or num_marbles == 3:
         directions = []
-
         for i in range(num_marbles):
             diff = (dest_coords[i][0] - source_coords[i][0], dest_coords[i][1] - source_coords[i][1])
             move_direction = None
@@ -211,8 +202,8 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
         if len(set(directions)) != 1:
             return False, "all marbles must move in the same direction"
 
-        move_direction = directions[0]
-        direction_vector = DIRECTION_VECTORS[move_direction]
+        move_direction_str = directions[0]
+        direction_vector = DIRECTION_VECTORS[move_direction_str]
 
         is_line_push = True
         if direction_vector[0] > 0 or (direction_vector[0] == 0 and direction_vector[1] > 0):
@@ -229,9 +220,11 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
                 is_line_push = False
                 break
 
+        # Check destination positions
         for i, dest in enumerate(dest_coords):
             dest_tuple = tuple(dest)
 
+            # Check if destination is occupied
             if dest_tuple in player_marbles_set or dest_tuple in opponent_marbles_set:
                 if dest_tuple in player_marbles_set:
                     is_moving_source = False
@@ -244,6 +237,7 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
                         return False, "cannot move onto your own stationary marble"
 
                 elif dest_tuple in opponent_marbles_set:
+                    # Can only push opponent marbles with a valid line push
                     if not is_line_push:
                         return False, "cannot move onto an opponent marble unless performing a valid line push"
 
@@ -252,6 +246,7 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
 
                     push_pos = (front_marble[0] + direction_vector[0], front_marble[1] + direction_vector[1])
 
+                    # Make sure we're pushing with the front marble
                     if push_pos != dest_tuple:
                         return False, "push opponent marbles with the front marble of your line"
 
@@ -279,6 +274,7 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
         for i, dest in enumerate(dest_coords):
             dest_tuple = tuple(dest)
             source_found = False
+
             for src in source_coords:
                 expected_dest = (src[0] + direction_vector[0], src[1] + direction_vector[1])
                 if tuple(expected_dest) == dest_tuple:
@@ -290,9 +286,7 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
 
     return True, "it works"
 
-
 def move_marbles(source_coords, dest_coords, board, current_player_color):
-
     is_valid, reason = move_validation(source_coords, dest_coords, board, current_player_color)
     if not is_valid:
         return None, 0
@@ -320,14 +314,15 @@ def move_marbles(source_coords, dest_coords, board, current_player_color):
 
     diff = (dest_coords[0][0] - source_coords[0][0], dest_coords[0][1] - source_coords[0][1])
     direction_vector = None
+
     for vector in DIRECTION_VECTORS.values():
         if vector == diff:
             direction_vector = vector
             break
 
     marbles_pushed_off = 0
-
     front_marble_idx = None
+
     for i, src in enumerate(source_coords):
         is_front = True
         for other_src in source_coords:
@@ -346,7 +341,6 @@ def move_marbles(source_coords, dest_coords, board, current_player_color):
         push_tuple = tuple(push_coord)
 
         if push_tuple in opponent_marbles_set:
-
             opponent_line = [push_tuple]
             next_coord = push_tuple
 
@@ -372,6 +366,7 @@ def move_marbles(source_coords, dest_coords, board, current_player_color):
                     marbles_pushed_off += 1
 
     source_tuples = [tuple(src) for src in source_coords]
+
     for i, src_tuple in enumerate(source_tuples):
         for j, marble in enumerate(player_marbles):
             if tuple(marble) == src_tuple:
@@ -384,10 +379,8 @@ def move_marbles(source_coords, dest_coords, board, current_player_color):
 
     return new_board, marbles_pushed_off
 
-
 def convert_to_dictionary(board_list, no_marble_value="Blank", black_marble_value="#8A8A8A",
                           white_marble_value="#D9D9D9"):
-
     valid_coords_list = [
         [9, 5], [9, 6], [9, 7], [9, 8], [9, 9],
         [8, 4], [8, 5], [8, 6], [8, 7], [8, 8], [8, 9],
@@ -407,7 +400,6 @@ def convert_to_dictionary(board_list, no_marble_value="Blank", black_marble_valu
     white_set = {tuple(marble) for marble in white_marbles}
 
     board_dict = {}
-
     letter_map = {i: chr(ord('A') + i - 1) for i in range(1, 10)}
 
     for row, col in valid_coords_list:

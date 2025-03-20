@@ -66,3 +66,18 @@ if __name__ == "__main__":
     test_02_board, test_02_turn = BoardIO.import_current_text_to_board("output/Test2.input")
     print(test_01_board)
     print(test_01_turn)
+
+    DIRECTION_VECTORS = {
+        "upper_left": (1, 0),
+        "upper_right": (1, 1),
+        "left": (0, -1),
+        "right": (0, 1),
+        "down_left": (-1, -1),
+        "down_right": (-1, 0)
+    }
+
+
+
+
+
+
