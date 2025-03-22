@@ -394,30 +394,57 @@ def evaluate_mobility(positions, friend_set, enemy_set):
 
     return mobility
 
+
+# improved time
 def calculate_centrality(friend_positions, enemy_positions):
-    friend_centrality = 0
-    enemy_centrality = 0
+    friend_centrality = 0.0
+    enemy_centrality = 0.0
     max_friend = min(len(friend_positions), 10)
     max_enemy = min(len(enemy_positions), 10)
 
-    for i in range(min(max_friend, len(friend_positions))):
-        pos = friend_positions[i]
+    # Precompute coord_to_index only once using zip
+    for pos in friend_positions[:max_friend]:
         idx = coord_to_index(pos)
         if idx >= 0:
             friend_centrality += CENTRALITY_VALUES[idx]
 
-    for i in range(min(max_enemy, len(enemy_positions))):
-        pos = enemy_positions[i]
+    for pos in enemy_positions[:max_enemy]:
         idx = coord_to_index(pos)
         if idx >= 0:
             enemy_centrality += CENTRALITY_VALUES[idx]
 
+    # Scaling adjustment
     if len(friend_positions) > max_friend:
-        friend_centrality *= (len(friend_positions) / max_friend)
+        friend_centrality *= len(friend_positions) / max_friend
     if len(enemy_positions) > max_enemy:
-        enemy_centrality *= (len(enemy_positions) / max_enemy)
+        enemy_centrality *= len(enemy_positions) / max_enemy
 
     return friend_centrality - enemy_centrality
+
+# def calculate_centrality(friend_positions, enemy_positions):
+#     friend_centrality = 0
+#     enemy_centrality = 0
+#     max_friend = min(len(friend_positions), 10)
+#     max_enemy = min(len(enemy_positions), 10)
+#
+#     for i in range(min(max_friend, len(friend_positions))):
+#         pos = friend_positions[i]
+#         idx = coord_to_index(pos)
+#         if idx >= 0:
+#             friend_centrality += CENTRALITY_VALUES[idx]
+#
+#     for i in range(min(max_enemy, len(enemy_positions))):
+#         pos = enemy_positions[i]
+#         idx = coord_to_index(pos)
+#         if idx >= 0:
+#             enemy_centrality += CENTRALITY_VALUES[idx]
+#
+#     if len(friend_positions) > max_friend:
+#         friend_centrality *= (len(friend_positions) / max_friend)
+#     if len(enemy_positions) > max_enemy:
+#         enemy_centrality *= (len(enemy_positions) / max_enemy)
+#
+#     return friend_centrality - enemy_centrality
 
 
 
