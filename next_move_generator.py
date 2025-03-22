@@ -137,22 +137,31 @@ def generate_all_directions(marble_list):
 
     return result
 
+
+
+
+# changing to explore more ,oves per turn and go deeper based on the time limit
+from move import move_validation, move_marbles, DIRECTION_VECTORS, VALID_COORDS, lists_to_sets
+
 def generate_all_next_moves(board, color):
-
     marble_groups = find_all_groups_of_size_1_2_3(board, color)
-
     result_dict = {}
 
+    # Precompute player and opponent sets once
+    player_set, opponent_set = lists_to_sets(board)
+    if color == "WHITE":
+        player_set, opponent_set = opponent_set, player_set
 
     for source in marble_groups:
-
         directions = generate_all_directions(source)
 
         for direction_name, dest in directions.items():
+            # Skip if any destination coordinates are off-board
             if any(tuple(d) not in VALID_COORDS for d in dest):
                 continue
 
-            is_valid, reason = move_validation(source, dest, board, color)
+            # Use precomputed sets for validation
+            is_valid, reason = move_validation(source, dest, board, color, player_set, opponent_set)
 
             if is_valid:
                 new_board, _ = move_marbles(source, dest, board, color)
@@ -160,10 +169,42 @@ def generate_all_next_moves(board, color):
                 if new_board is not None:
                     source_tuple = tuple(tuple(pos) for pos in source)
                     dest_tuple = tuple(tuple(pos) for pos in dest)
-
                     result_dict[(source_tuple, dest_tuple)] = new_board
 
     return result_dict
+
+
+
+
+
+
+# def generate_all_next_moves(board, color):
+#
+#     marble_groups = find_all_groups_of_size_1_2_3(board, color)
+#
+#     result_dict = {}
+#
+#
+#     for source in marble_groups:
+#
+#         directions = generate_all_directions(source)
+#
+#         for direction_name, dest in directions.items():
+#             if any(tuple(d) not in VALID_COORDS for d in dest):
+#                 continue
+#
+#             is_valid, reason = move_validation(source, dest, board, color)
+#
+#             if is_valid:
+#                 new_board, _ = move_marbles(source, dest, board, color)
+#
+#                 if new_board is not None:
+#                     source_tuple = tuple(tuple(pos) for pos in source)
+#                     dest_tuple = tuple(tuple(pos) for pos in dest)
+#
+#                     result_dict[(source_tuple, dest_tuple)] = new_board
+#
+#     return result_dict
 
 def save_board_states_to_file(board_states, filename, next_player_color):
 

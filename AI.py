@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from move import DIRECTION_VECTORS
 
 DIRECTIONS = np.array([
     [1, 0],
@@ -108,11 +109,25 @@ def is_valid_coord(coord):
 def get_neighbors(coord):
     return NEIGHBOR_CACHE.get(tuple(coord), [])
 
+
+
+
+# changing time from 0.472 sec to 0.058 sec
+COORD_INDEX_MAP = {tuple(coord): idx for idx, coord in enumerate(VALID_COORDS)}
+
 def coord_to_index(coord):
-    for i in range(VALID_COORDS.shape[0]):
-        if VALID_COORDS[i, 0] == coord[0] and VALID_COORDS[i, 1] == coord[1]:
-            return i
-    return -1
+    return COORD_INDEX_MAP.get(tuple(coord), -1)
+
+
+
+
+
+
+# def coord_to_index(coord):
+#     for i in range(VALID_COORDS.shape[0]):
+#         if VALID_COORDS[i, 0] == coord[0] and VALID_COORDS[i, 1] == coord[1]:
+#             return i
+#     return -1
 
 def is_in_array(coord, arr):
     if len(arr) > 10:
@@ -219,27 +234,31 @@ def evaluate_hexagon_formation(friend_positions):
 
     return hexagon_score
 
+
+
+#changing to go deeper in the tree
 def evaluate_push_ability_strength(groups, player_set, opponent_set):
     strength = 0.0
+
     if len(groups) <= 1:
         return 0.0
 
+    # 3-marbles groups
     three_groups = [g for g in groups if len(g) == 3]
-    max_three_groups = min(len(three_groups), 10)
-
-    for i in range(min(max_three_groups, len(three_groups))):
-        group = three_groups[i]
+    for group in three_groups[:10]:
         pos1, pos2, pos3 = group
         diff1 = (pos2[0] - pos1[0], pos2[1] - pos1[1])
         diff2 = (pos3[0] - pos2[0], pos3[1] - pos2[1])
 
         if diff1 == diff2:
-            push_pos = (pos3[0] + diff1[0], pos3[1] + diff1[1])
+            push_dir = diff1
+            push_pos = (pos3[0] + push_dir[0], pos3[1] + push_dir[1])
+
             if push_pos in opponent_set:
                 push_count = 1
                 next_pos = push_pos
                 for _ in range(2):
-                    next_pos = (next_pos[0] + diff1[0], next_pos[1] + diff1[1])
+                    next_pos = (next_pos[0] + push_dir[0], next_pos[1] + push_dir[1])
                     if next_pos in opponent_set:
                         push_count += 1
                     else:
@@ -248,17 +267,15 @@ def evaluate_push_ability_strength(groups, player_set, opponent_set):
                 if push_count <= 2:
                     strength += 6.0 * push_count
 
-                last_pos = (push_pos[0] + diff1[0] * push_count, push_pos[1] + diff1[1] * push_count)
+                last_pos = (push_pos[0] + push_dir[0] * push_count, push_pos[1] + push_dir[1] * push_count)
                 if not is_valid_coord(last_pos):
                     strength += 15.0
             elif is_valid_coord(push_pos) and push_pos not in player_set:
                 strength += 1.0
 
+    # 2-marbles groups
     two_groups = [g for g in groups if len(g) == 2]
-    max_two_groups = min(len(two_groups), 10)
-
-    for i in range(min(max_two_groups, len(two_groups))):
-        group = two_groups[i]
+    for group in two_groups[:10]:
         pos1, pos2 = group
         diff = (pos2[0] - pos1[0], pos2[1] - pos1[1])
         push_pos = (pos2[0] + diff[0], pos2[1] + diff[1])
@@ -271,6 +288,62 @@ def evaluate_push_ability_strength(groups, player_set, opponent_set):
                     strength += 10.0
 
     return strength
+
+
+
+
+# def evaluate_push_ability_strength(groups, player_set, opponent_set):
+#     strength = 0.0
+#     if len(groups) <= 1:
+#         return 0.0
+#
+#     three_groups = [g for g in groups if len(g) == 3]
+#     max_three_groups = min(len(three_groups), 10)
+#
+#     for i in range(min(max_three_groups, len(three_groups))):
+#         group = three_groups[i]
+#         pos1, pos2, pos3 = group
+#         diff1 = (pos2[0] - pos1[0], pos2[1] - pos1[1])
+#         diff2 = (pos3[0] - pos2[0], pos3[1] - pos2[1])
+#
+#         if diff1 == diff2:
+#             push_pos = (pos3[0] + diff1[0], pos3[1] + diff1[1])
+#             if push_pos in opponent_set:
+#                 push_count = 1
+#                 next_pos = push_pos
+#                 for _ in range(2):
+#                     next_pos = (next_pos[0] + diff1[0], next_pos[1] + diff1[1])
+#                     if next_pos in opponent_set:
+#                         push_count += 1
+#                     else:
+#                         break
+#
+#                 if push_count <= 2:
+#                     strength += 6.0 * push_count
+#
+#                 last_pos = (push_pos[0] + diff1[0] * push_count, push_pos[1] + diff1[1] * push_count)
+#                 if not is_valid_coord(last_pos):
+#                     strength += 15.0
+#             elif is_valid_coord(push_pos) and push_pos not in player_set:
+#                 strength += 1.0
+#
+#     two_groups = [g for g in groups if len(g) == 2]
+#     max_two_groups = min(len(two_groups), 10)
+#
+#     for i in range(min(max_two_groups, len(two_groups))):
+#         group = two_groups[i]
+#         pos1, pos2 = group
+#         diff = (pos2[0] - pos1[0], pos2[1] - pos1[1])
+#         push_pos = (pos2[0] + diff[0], pos2[1] + diff[1])
+#
+#         if push_pos in opponent_set:
+#             next_pos = (push_pos[0] + diff[0], push_pos[1] + diff[1])
+#             if next_pos not in opponent_set:
+#                 strength += 4.0
+#                 if not is_valid_coord(next_pos):
+#                     strength += 10.0
+#
+#     return strength
 
 def evaluate_edge_safety(positions, opponent_positions):
     if not positions:
@@ -346,6 +419,12 @@ def calculate_centrality(friend_positions, enemy_positions):
 
     return friend_centrality - enemy_centrality
 
+
+
+
+
+
+#changing from 3 to 2.5 sec
 def evaluate_board(board, player):
     friend_idx = 0 if player.lower() == "black" else 1
     enemy_idx = 1 if player.lower() == "black" else 0
@@ -357,6 +436,7 @@ def evaluate_board(board, player):
     enemy_count = len(enemy_marbles)
     marble_diff = friend_count - enemy_count
 
+    # Early termination for win/loss
     if friend_count <= 8:
         return -10000.0
     if enemy_count <= 8:
@@ -366,8 +446,9 @@ def evaluate_board(board, player):
     if marble_diff <= -5:
         return -800.0
 
-    friend_positions = [tuple(pos) for pos in friend_marbles]
-    enemy_positions = [tuple(pos) for pos in enemy_marbles]
+    # Precompute positions and sets
+    friend_positions = list(map(tuple, friend_marbles))
+    enemy_positions = list(map(tuple, enemy_marbles))
     friend_set = set(friend_positions)
     enemy_set = set(enemy_positions)
 
@@ -379,24 +460,30 @@ def evaluate_board(board, player):
 
     friend_groups = find_groups_fast(friend_marbles)
     enemy_groups = find_groups_fast(enemy_marbles)
-    push_ability_score = evaluate_push_ability_strength(friend_groups, friend_set,
-                                                        enemy_set) - evaluate_push_ability_strength(
-        enemy_groups, enemy_set, friend_set)
+    push_ability_score = (
+        evaluate_push_ability_strength(friend_groups, friend_set, enemy_set)
+        - evaluate_push_ability_strength(enemy_groups, enemy_set, friend_set)
+    )
 
-    edge_safety_score = evaluate_edge_safety(friend_positions, enemy_marbles) - evaluate_edge_safety(enemy_positions,
-                                                                                                     friend_marbles)
+    edge_safety_score = (
+        evaluate_edge_safety(friend_positions, enemy_marbles)
+        - evaluate_edge_safety(enemy_positions, friend_marbles)
+    )
 
-    hexagon_score = evaluate_hexagon_formation(friend_positions) - evaluate_hexagon_formation(enemy_positions) * 0.8
+    hexagon_score = (
+        evaluate_hexagon_formation(friend_positions)
+        - 0.8 * evaluate_hexagon_formation(enemy_positions)
+    )
 
     enemy_off = 14 - enemy_count
-    enemy_off_score = 600 * enemy_off
     friend_off = 14 - friend_count
+    enemy_off_score = 600 * enemy_off
     friend_off_score = -650 * friend_off
 
-    mobility_score = evaluate_mobility(friend_positions, friend_set, enemy_set) - evaluate_mobility(enemy_positions,
-                                                                                                    enemy_set,
-                                                                                                    friend_set)
-
+    mobility_score = (
+        evaluate_mobility(friend_positions, friend_set, enemy_set)
+        - evaluate_mobility(enemy_positions, enemy_set, friend_set)
+    )
 
     features = {
         'marble_diff': marble_feature,
@@ -410,12 +497,83 @@ def evaluate_board(board, player):
 
     weights = WEIGHTS.copy()
 
-
-    total_score = 0.0
-    for name, val in features.items():
-        total_score += weights.get(name, 1) * val
-
+    total_score = sum(weights.get(name, 1) * val for name, val in features.items())
     return total_score
+
+
+
+
+
+# def evaluate_board(board, player):
+#     friend_idx = 0 if player.lower() == "black" else 1
+#     enemy_idx = 1 if player.lower() == "black" else 0
+#
+#     friend_marbles = board[friend_idx]
+#     enemy_marbles = board[enemy_idx]
+#
+#     friend_count = len(friend_marbles)
+#     enemy_count = len(enemy_marbles)
+#     marble_diff = friend_count - enemy_count
+#
+#     if friend_count <= 8:
+#         return -10000.0
+#     if enemy_count <= 8:
+#         return 10000.0
+#     if marble_diff >= 5:
+#         return 800.0
+#     if marble_diff <= -5:
+#         return -800.0
+#
+#     friend_positions = [tuple(pos) for pos in friend_marbles]
+#     enemy_positions = [tuple(pos) for pos in enemy_marbles]
+#     friend_set = set(friend_positions)
+#     enemy_set = set(enemy_positions)
+#
+#     total_lost = 28 - (friend_count + enemy_count)
+#     progress_factor = 1.0 + total_lost / 10.0
+#     marble_feature = marble_diff * progress_factor
+#
+#     centrality_score = calculate_centrality(friend_positions, enemy_positions)
+#
+#     friend_groups = find_groups_fast(friend_marbles)
+#     enemy_groups = find_groups_fast(enemy_marbles)
+#     push_ability_score = evaluate_push_ability_strength(friend_groups, friend_set,
+#                                                         enemy_set) - evaluate_push_ability_strength(
+#         enemy_groups, enemy_set, friend_set)
+#
+#     edge_safety_score = evaluate_edge_safety(friend_positions, enemy_marbles) - evaluate_edge_safety(enemy_positions,
+#                                                                                                      friend_marbles)
+#
+#     hexagon_score = evaluate_hexagon_formation(friend_positions) - evaluate_hexagon_formation(enemy_positions) * 0.8
+#
+#     enemy_off = 14 - enemy_count
+#     enemy_off_score = 600 * enemy_off
+#     friend_off = 14 - friend_count
+#     friend_off_score = -650 * friend_off
+#
+#     mobility_score = evaluate_mobility(friend_positions, friend_set, enemy_set) - evaluate_mobility(enemy_positions,
+#                                                                                                     enemy_set,
+#                                                                                                     friend_set)
+#
+#
+#     features = {
+#         'marble_diff': marble_feature,
+#         'centrality': centrality_score,
+#         'push_ability': push_ability_score,
+#         'edge_safety': edge_safety_score,
+#         'mobility': mobility_score,
+#         'formation': hexagon_score,
+#         'off_board': enemy_off_score + friend_off_score
+#     }
+#
+#     weights = WEIGHTS.copy()
+#
+#
+#     total_score = 0.0
+#     for name, val in features.items():
+#         total_score += weights.get(name, 1) * val
+#
+#     return total_score
 
 def board_to_key(board):
     parts = ["B"]

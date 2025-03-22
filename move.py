@@ -94,24 +94,30 @@ def lists_to_sets(board):
     white_set = {tuple(coord) for coord in board[1]}
     return [black_set, white_set]
 
-def move_validation(source_coords, dest_coords, board, current_player_color):
 
-    source_coords_tuples = [tuple(coord) for coord in source_coords]
-    dest_coords_tuples = [tuple(coord) for coord in dest_coords]
 
-    black_marbles_set = {tuple(marble) for marble in board[0]}
-    white_marbles_set = {tuple(marble) for marble in board[1]}
 
-    if current_player_color == "BLACK":
-        player_marbles_set = black_marbles_set
-        opponent_marbles_set = white_marbles_set
-    else:
-        player_marbles_set = white_marbles_set
-        opponent_marbles_set = black_marbles_set
 
-    for coord_tuple in source_coords_tuples:
-        if coord_tuple not in player_marbles_set:
-            return False, "only your marbles"
+
+
+# changing from 3.82 to 3.32 sec
+def move_validation(source_coords, dest_coords, board, current_player_color, player_set=None, opponent_set=None):
+    source_coords_tuples = list(map(tuple, source_coords))
+    dest_coords_tuples = list(map(tuple, dest_coords))
+
+    if player_set is None or opponent_set is None:
+        black_marbles_set = {tuple(marble) for marble in board[0]}
+        white_marbles_set = {tuple(marble) for marble in board[1]}
+
+        if current_player_color == "BLACK":
+            player_set = black_marbles_set
+            opponent_set = white_marbles_set
+        else:
+            player_set = white_marbles_set
+            opponent_set = black_marbles_set
+
+    if not all(coord in player_set for coord in source_coords_tuples):
+        return False, "only your marbles"
 
     num_marbles = len(source_coords)
     if num_marbles < 1 or num_marbles > 3:
@@ -120,133 +126,74 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
     if len(source_coords) != len(dest_coords):
         return False, "Number of source and destination coordinates must match"
 
-    for coord_tuple in dest_coords_tuples:
-        if coord_tuple not in VALID_COORDS:
-            return False, "Destination coordinates must be on the board"
+    if not all(coord in VALID_COORDS for coord in dest_coords_tuples):
+        return False, "Destination coordinates must be on the board"
 
-    # Check adjacency for 2-marble groups
+    # 2-marble adjacency check
     if num_marbles == 2:
         diff_vector = (source_coords[1][0] - source_coords[0][0], source_coords[1][1] - source_coords[0][1])
-
-        is_adjacent = False
-        for vector in DIRECTION_VECTORS.values():
-            if diff_vector == vector or diff_vector == (-vector[0], -vector[1]):
-                is_adjacent = True
-                break
-
-        if not is_adjacent:
+        if not any(diff_vector == v or diff_vector == (-v[0], -v[1]) for v in DIRECTION_VECTORS.values()):
             return False, "source marbles must be adjacent"
 
-    # Check if 3-marble groups are in a straight line
+    # 3-marble straight line check
     if num_marbles == 3:
         sorted_coords = sorted(source_coords, key=lambda x: (x[0], x[1]))
-
         diff1 = (sorted_coords[1][0] - sorted_coords[0][0], sorted_coords[1][1] - sorted_coords[0][1])
-
-        is_adjacent1 = False
-        for vector in DIRECTION_VECTORS.values():
-            if diff1 == vector or diff1 == (-vector[0], -vector[1]):
-                is_adjacent1 = True
-                break
-
-        if not is_adjacent1:
-            return False, "marbles must be adjacent to each other"
-
         diff2 = (sorted_coords[2][0] - sorted_coords[1][0], sorted_coords[2][1] - sorted_coords[1][1])
 
-        is_adjacent2 = False
-        for vector in DIRECTION_VECTORS.values():
-            if diff2 == vector or diff2 == (-vector[0], -vector[1]):
-                is_adjacent2 = True
-                break
-
-        if not is_adjacent2:
+        if not (any(diff1 == v or diff1 == (-v[0], -v[1]) for v in DIRECTION_VECTORS.values())
+                and any(diff2 == v or diff2 == (-v[0], -v[1]) for v in DIRECTION_VECTORS.values())):
             return False, "marbles must be adjacent to each other"
 
         if diff1 != diff2:
             return False, "three marbles must be in a straight line"
 
+    # Single marble move
     if num_marbles == 1:
         diff = (dest_coords[0][0] - source_coords[0][0], dest_coords[0][1] - source_coords[0][1])
-        move_direction = None
-
-        for direction, vector in DIRECTION_VECTORS.items():
-            if vector == diff:
-                move_direction = direction
-                break
-
-        if move_direction is None:
+        if not any(diff == v for v in DIRECTION_VECTORS.values()):
             return False, "invalid movement direction for a single marble"
 
-        dest_tuple = tuple(dest_coords[0])
-        if dest_tuple in black_marbles_set or dest_tuple in white_marbles_set:
+        if tuple(dest_coords[0]) in player_set or tuple(dest_coords[0]) in opponent_set:
             return False, "destination position must be empty"
 
-    # Multi-marble movement validation
-    elif num_marbles == 2 or num_marbles == 3:
+    else:
+        # Multi-marble move
         directions = []
         for i in range(num_marbles):
             diff = (dest_coords[i][0] - source_coords[i][0], dest_coords[i][1] - source_coords[i][1])
-            move_direction = None
-
-            for direction, vector in DIRECTION_VECTORS.items():
-                if vector == diff:
-                    move_direction = direction
-                    break
-
+            move_direction = next((d for d, v in DIRECTION_VECTORS.items() if v == diff), None)
             if move_direction is None:
                 return False, "invalid movement direction"
-
             directions.append(move_direction)
 
         if len(set(directions)) != 1:
             return False, "all marbles must move in the same direction"
 
-        move_direction_str = directions[0]
-        direction_vector = DIRECTION_VECTORS[move_direction_str]
+        move_vector = DIRECTION_VECTORS[directions[0]]
 
-        is_line_push = True
-        if direction_vector[0] > 0 or (direction_vector[0] == 0 and direction_vector[1] > 0):
-            sorted_source = sorted(source_coords, key=lambda x: (-x[0], -x[1]))
-        else:
-            sorted_source = sorted(source_coords, key=lambda x: (x[0], x[1]))
+        sorted_source = sorted(source_coords, key=lambda x: (-x[0], -x[1]) if move_vector[0] > 0 or (move_vector[0] == 0 and move_vector[1] > 0) else (x[0], x[1]))
 
-        for i in range(1, len(sorted_source)):
-            prev_pos = sorted_source[i - 1]
-            curr_pos = sorted_source[i]
-            diff = (prev_pos[0] - curr_pos[0], prev_pos[1] - curr_pos[1])
+        is_line_push = all(
+            (sorted_source[i - 1][0] - sorted_source[i][0],
+             sorted_source[i - 1][1] - sorted_source[i][1]) in [move_vector, (-move_vector[0], -move_vector[1])]
+            for i in range(1, len(sorted_source))
+        )
 
-            if diff != direction_vector and diff != (-direction_vector[0], -direction_vector[1]):
-                is_line_push = False
-                break
-
-        # Check destination positions
         for i, dest in enumerate(dest_coords):
             dest_tuple = tuple(dest)
 
-            # Check if destination is occupied
-            if dest_tuple in player_marbles_set or dest_tuple in opponent_marbles_set:
-                if dest_tuple in player_marbles_set:
-                    is_moving_source = False
-                    for src in source_coords:
-                        if tuple(src) == dest_tuple:
-                            is_moving_source = True
-                            break
-
-                    if not is_moving_source:
+            if dest_tuple in player_set or dest_tuple in opponent_set:
+                if dest_tuple in player_set:
+                    if dest_tuple not in map(tuple, source_coords):
                         return False, "cannot move onto your own stationary marble"
-
-                elif dest_tuple in opponent_marbles_set:
-                    # Can only push opponent marbles with a valid line push
+                else:
                     if not is_line_push:
                         return False, "cannot move onto an opponent marble unless performing a valid line push"
 
                     front_marble = sorted_source[0]
-                    front_pos = tuple(front_marble)
+                    push_pos = (front_marble[0] + move_vector[0], front_marble[1] + move_vector[1])
 
-                    push_pos = (front_marble[0] + direction_vector[0], front_marble[1] + direction_vector[1])
-
-                    # Make sure we're pushing with the front marble
                     if push_pos != dest_tuple:
                         return False, "push opponent marbles with the front marble of your line"
 
@@ -254,37 +201,216 @@ def move_validation(source_coords, dest_coords, board, current_player_color):
                     next_pos = push_pos
 
                     while True:
-                        next_pos = (next_pos[0] + direction_vector[0], next_pos[1] + direction_vector[1])
-                        if next_pos in opponent_marbles_set:
+                        next_pos = (next_pos[0] + move_vector[0], next_pos[1] + move_vector[1])
+                        if next_pos in opponent_set:
                             opponent_line.append(next_pos)
                         else:
                             break
 
                     if len(opponent_line) >= num_marbles:
-                        return False, "cannot push unless you have more marbles than opponent"
+                        return False, "can't push if opponents equal or outnumber you"
 
-                    last_opponent = opponent_line[-1]
-                    push_dest = (last_opponent[0] + direction_vector[0], last_opponent[1] + direction_vector[1])
+                    if next_pos in player_set or next_pos in opponent_set:
+                        return False, "destination behind opponent marble is blocked"
 
-                    if push_dest not in VALID_COORDS:
-                        pass
-                    elif push_dest in black_marbles_set or push_dest in white_marbles_set:
-                        return False, "cannot push marble into another marble"
+    return True, "valid"
 
-        for i, dest in enumerate(dest_coords):
-            dest_tuple = tuple(dest)
-            source_found = False
 
-            for src in source_coords:
-                expected_dest = (src[0] + direction_vector[0], src[1] + direction_vector[1])
-                if tuple(expected_dest) == dest_tuple:
-                    source_found = True
-                    break
 
-            if not source_found and dest_tuple not in opponent_marbles_set:
-                return False, "invalid destination for marble movement"
 
-    return True, "it works"
+
+
+# def move_validation(source_coords, dest_coords, board, current_player_color):
+#
+#     source_coords_tuples = [tuple(coord) for coord in source_coords]
+#     dest_coords_tuples = [tuple(coord) for coord in dest_coords]
+#
+#     black_marbles_set = {tuple(marble) for marble in board[0]}
+#     white_marbles_set = {tuple(marble) for marble in board[1]}
+#
+#     if current_player_color == "BLACK":
+#         player_marbles_set = black_marbles_set
+#         opponent_marbles_set = white_marbles_set
+#     else:
+#         player_marbles_set = white_marbles_set
+#         opponent_marbles_set = black_marbles_set
+#
+#     for coord_tuple in source_coords_tuples:
+#         if coord_tuple not in player_marbles_set:
+#             return False, "only your marbles"
+#
+#     num_marbles = len(source_coords)
+#     if num_marbles < 1 or num_marbles > 3:
+#         return False, "move 1, 2, or 3 marbles at a time"
+#
+#     if len(source_coords) != len(dest_coords):
+#         return False, "Number of source and destination coordinates must match"
+#
+#     for coord_tuple in dest_coords_tuples:
+#         if coord_tuple not in VALID_COORDS:
+#             return False, "Destination coordinates must be on the board"
+#
+#     # Check adjacency for 2-marble groups
+#     if num_marbles == 2:
+#         diff_vector = (source_coords[1][0] - source_coords[0][0], source_coords[1][1] - source_coords[0][1])
+#
+#         is_adjacent = False
+#         for vector in DIRECTION_VECTORS.values():
+#             if diff_vector == vector or diff_vector == (-vector[0], -vector[1]):
+#                 is_adjacent = True
+#                 break
+#
+#         if not is_adjacent:
+#             return False, "source marbles must be adjacent"
+#
+#     # Check if 3-marble groups are in a straight line
+#     if num_marbles == 3:
+#         sorted_coords = sorted(source_coords, key=lambda x: (x[0], x[1]))
+#
+#         diff1 = (sorted_coords[1][0] - sorted_coords[0][0], sorted_coords[1][1] - sorted_coords[0][1])
+#
+#         is_adjacent1 = False
+#         for vector in DIRECTION_VECTORS.values():
+#             if diff1 == vector or diff1 == (-vector[0], -vector[1]):
+#                 is_adjacent1 = True
+#                 break
+#
+#         if not is_adjacent1:
+#             return False, "marbles must be adjacent to each other"
+#
+#         diff2 = (sorted_coords[2][0] - sorted_coords[1][0], sorted_coords[2][1] - sorted_coords[1][1])
+#
+#         is_adjacent2 = False
+#         for vector in DIRECTION_VECTORS.values():
+#             if diff2 == vector or diff2 == (-vector[0], -vector[1]):
+#                 is_adjacent2 = True
+#                 break
+#
+#         if not is_adjacent2:
+#             return False, "marbles must be adjacent to each other"
+#
+#         if diff1 != diff2:
+#             return False, "three marbles must be in a straight line"
+#
+#     if num_marbles == 1:
+#         diff = (dest_coords[0][0] - source_coords[0][0], dest_coords[0][1] - source_coords[0][1])
+#         move_direction = None
+#
+#         for direction, vector in DIRECTION_VECTORS.items():
+#             if vector == diff:
+#                 move_direction = direction
+#                 break
+#
+#         if move_direction is None:
+#             return False, "invalid movement direction for a single marble"
+#
+#         dest_tuple = tuple(dest_coords[0])
+#         if dest_tuple in black_marbles_set or dest_tuple in white_marbles_set:
+#             return False, "destination position must be empty"
+#
+#     # Multi-marble movement validation
+#     elif num_marbles == 2 or num_marbles == 3:
+#         directions = []
+#         for i in range(num_marbles):
+#             diff = (dest_coords[i][0] - source_coords[i][0], dest_coords[i][1] - source_coords[i][1])
+#             move_direction = None
+#
+#             for direction, vector in DIRECTION_VECTORS.items():
+#                 if vector == diff:
+#                     move_direction = direction
+#                     break
+#
+#             if move_direction is None:
+#                 return False, "invalid movement direction"
+#
+#             directions.append(move_direction)
+#
+#         if len(set(directions)) != 1:
+#             return False, "all marbles must move in the same direction"
+#
+#         move_direction_str = directions[0]
+#         direction_vector = DIRECTION_VECTORS[move_direction_str]
+#
+#         is_line_push = True
+#         if direction_vector[0] > 0 or (direction_vector[0] == 0 and direction_vector[1] > 0):
+#             sorted_source = sorted(source_coords, key=lambda x: (-x[0], -x[1]))
+#         else:
+#             sorted_source = sorted(source_coords, key=lambda x: (x[0], x[1]))
+#
+#         for i in range(1, len(sorted_source)):
+#             prev_pos = sorted_source[i - 1]
+#             curr_pos = sorted_source[i]
+#             diff = (prev_pos[0] - curr_pos[0], prev_pos[1] - curr_pos[1])
+#
+#             if diff != direction_vector and diff != (-direction_vector[0], -direction_vector[1]):
+#                 is_line_push = False
+#                 break
+#
+#         # Check destination positions
+#         for i, dest in enumerate(dest_coords):
+#             dest_tuple = tuple(dest)
+#
+#             # Check if destination is occupied
+#             if dest_tuple in player_marbles_set or dest_tuple in opponent_marbles_set:
+#                 if dest_tuple in player_marbles_set:
+#                     is_moving_source = False
+#                     for src in source_coords:
+#                         if tuple(src) == dest_tuple:
+#                             is_moving_source = True
+#                             break
+#
+#                     if not is_moving_source:
+#                         return False, "cannot move onto your own stationary marble"
+#
+#                 elif dest_tuple in opponent_marbles_set:
+#                     # Can only push opponent marbles with a valid line push
+#                     if not is_line_push:
+#                         return False, "cannot move onto an opponent marble unless performing a valid line push"
+#
+#                     front_marble = sorted_source[0]
+#                     front_pos = tuple(front_marble)
+#
+#                     push_pos = (front_marble[0] + direction_vector[0], front_marble[1] + direction_vector[1])
+#
+#                     # Make sure we're pushing with the front marble
+#                     if push_pos != dest_tuple:
+#                         return False, "push opponent marbles with the front marble of your line"
+#
+#                     opponent_line = [push_pos]
+#                     next_pos = push_pos
+#
+#                     while True:
+#                         next_pos = (next_pos[0] + direction_vector[0], next_pos[1] + direction_vector[1])
+#                         if next_pos in opponent_marbles_set:
+#                             opponent_line.append(next_pos)
+#                         else:
+#                             break
+#
+#                     if len(opponent_line) >= num_marbles:
+#                         return False, "cannot push unless you have more marbles than opponent"
+#
+#                     last_opponent = opponent_line[-1]
+#                     push_dest = (last_opponent[0] + direction_vector[0], last_opponent[1] + direction_vector[1])
+#
+#                     if push_dest not in VALID_COORDS:
+#                         pass
+#                     elif push_dest in black_marbles_set or push_dest in white_marbles_set:
+#                         return False, "cannot push marble into another marble"
+#
+#         for i, dest in enumerate(dest_coords):
+#             dest_tuple = tuple(dest)
+#             source_found = False
+#
+#             for src in source_coords:
+#                 expected_dest = (src[0] + direction_vector[0], src[1] + direction_vector[1])
+#                 if tuple(expected_dest) == dest_tuple:
+#                     source_found = True
+#                     break
+#
+#             if not source_found and dest_tuple not in opponent_marbles_set:
+#                 return False, "invalid destination for marble movement"
+#
+#     return True, "it works"
 
 def move_marbles(source_coords, dest_coords, board, current_player_color):
     is_valid, reason = move_validation(source_coords, dest_coords, board, current_player_color)
