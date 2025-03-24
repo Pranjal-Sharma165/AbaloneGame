@@ -723,7 +723,7 @@ def process_move_command():
             new_board_list = list(new_boards.values())
             new_moves_list = list(new_boards.keys())
             print(new_board_list)
-            random_number = random.randint(0, len(new_board_list))
+            random_number = random.randint(0, len(new_board_list)-1)
             random_board = new_board_list[random_number]
             random_move = new_moves_list[random_number]
             move_str = get_move_string_from_key(random_move)
@@ -785,7 +785,7 @@ def process_move_command():
             new_board_list = list(new_boards.values())
             new_moves_list = list(new_boards.keys())
             print(new_board_list)
-            random_number = random.randint(0, len(new_board_list))
+            random_number = random.randint(0, len(new_board_list)-1)
             random_board = new_board_list[random_number]
             random_move = new_moves_list[random_number]
             move_str = get_move_string_from_key(random_move)
