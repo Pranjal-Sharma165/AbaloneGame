@@ -642,6 +642,7 @@ def revert_info():
     # Reset turn duration and total game timer
     if move_start_time is not None:
         total_game_time = move_start_time - game_start_time - total_pause_duration
+        game_start_time += time.time() - move_start_time
         timer_label.config(text=f"Time: {int(total_game_time)}s")
         move_start_time = time.time()
 
