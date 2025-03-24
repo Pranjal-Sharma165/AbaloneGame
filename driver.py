@@ -709,7 +709,7 @@ def process_move_command():
         new_board_list, move_str = find_best_move(
             board_list,
             current_player_color,
-            depth=4,
+            depth=2,
             time_limit=ai_time_limit,
             from_move_generator=generate_all_next_moves
         )
@@ -745,46 +745,44 @@ def process_move_command():
         on opponent's turn, you can type 1, enter. on your turn, you can type 2, enter.
         
         """
-        # board_list = convert_board_format(current_board)
-        #
-        # current_player_color = "black" if current_player == "Black" else "white"
-        #
-        # from AI import find_best_move
-        # from next_move_generator import generate_all_next_moves
-        #
-        # ai_time_limit = 12
-        #
-        # next_move_label.config(text="AI is thinking...")
-        # root.update()
-        #
-        # new_board_list, move_str = find_best_move(
-        #     board_list,
-        #     current_player_color,
-        #     depth=4,
-        #     time_limit=ai_time_limit,
-        #     from_move_generator=generate_all_next_moves
-        # )
+        board_list = convert_board_format(current_board)
 
+        current_player_color = "black" if current_player == "Black" else "white"
 
-        # new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-        #
-        # display_ai_move_log(move_str)
-        #
-        # next_move_label.config(text="Type your move")
-        # old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-        # new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
-        # marbles_pushed_off = old_marbles - new_marbles
+        from AI2_michael import find_best_move
+        from next_move_generator import generate_all_next_moves
 
-        # if marbles_pushed_off > 0:
-        #     if current_player == "Black":
-        #         white_score += marbles_pushed_off
-        #         white_score_label.config(text=f"White Marbles Lost: {white_score} ")
-        #     else:
-        #         black_score += marbles_pushed_off
-        #         black_score_label.config(text=f"Black Marbles Lost: {black_score}")
-        #
-        # current_board = new_board_dict
-        # draw_board(current_board)
+        ai_time_limit = 12
+
+        next_move_label.config(text="AI is thinking...")
+        root.update()
+
+        new_board_list, move_str = find_best_move(
+            board_list,
+            current_player_color,
+            depth=2,
+            time_limit=ai_time_limit,
+            from_move_generator=generate_all_next_moves
+        )
+        new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
+
+        display_ai_move_log(move_str)
+
+        next_move_label.config(text="Type your move")
+        old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
+        new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+        marbles_pushed_off = old_marbles - new_marbles
+
+        if marbles_pushed_off > 0:
+            if current_player == "Black":
+                white_score += marbles_pushed_off
+                white_score_label.config(text=f"White Marbles Lost: {white_score} ")
+            else:
+                black_score += marbles_pushed_off
+                black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+
+        current_board = new_board_dict
+        draw_board(current_board)
         update_move()
 
         move_entry.delete(0, tk.END)
