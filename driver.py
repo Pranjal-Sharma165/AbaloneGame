@@ -730,6 +730,7 @@ def process_move_command():
             print(move_str)
             new_board_dict = convert_to_dictionary(random_board, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
             first_move = False
+            marbles_pushed_off = 0
         else:
             new_board_list, move_str = find_best_move(
                 board_list,
@@ -739,13 +740,13 @@ def process_move_command():
                 from_move_generator=generate_all_next_moves
             )
             new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
+            old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
+            new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+            marbles_pushed_off = old_marbles - new_marbles
 
         display_ai_move_log(move_str)
 
         next_move_label.config(text="Type your move")
-        old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-        new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
-        marbles_pushed_off = old_marbles - new_marbles
 
         if marbles_pushed_off > 0:
             if current_player == "Black":
@@ -792,6 +793,7 @@ def process_move_command():
             print(move_str)
             new_board_dict = convert_to_dictionary(random_board, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
             first_move = False
+            marbles_pushed_off = 0
         else:
             new_board_list, move_str = find_best_move(
                 board_list,
@@ -801,13 +803,13 @@ def process_move_command():
                 from_move_generator=generate_all_next_moves
             )
             new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
+            old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
+            new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+            marbles_pushed_off = old_marbles - new_marbles
 
         display_ai_move_log(move_str)
 
         next_move_label.config(text="Type your move")
-        old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-        new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
-        marbles_pushed_off = old_marbles - new_marbles
 
         if marbles_pushed_off > 0:
             if current_player == "Black":
