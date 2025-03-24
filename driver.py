@@ -160,10 +160,11 @@ def add_undo_tag_to_text_file(filename):
 
         if len(lines) > 0:
             # Append (undone) tag to last line
-            lines[-1] = lines[-1].rstrip() + " " + "(undone)" + "\n"
+            lines[-1] = lines[-1].strip() + " (undone)\n"
 
             with open(filename, "w") as file:
                 file.writelines(lines)
+                file.flush()
             # print(f"Last line removed successfully.")
         else:
             print("No line to remove.")
@@ -649,7 +650,7 @@ def display_ai_move_log(move):
     """
     Updates the move history display with the latest move.
     """
-    global file_move
+    # global file_move
 
     move_history_text.config(state="normal")  # Enable editing
     move_history_text.insert(tk.END, f"{current_player}: {move}\n")  # Append the move
@@ -657,14 +658,18 @@ def display_ai_move_log(move):
     move_history_text.config(state="disabled")  # Disable editing
 
     # Write move entry into move history text file
-    file_move.write(f"{current_player}: {move}\n")
-    file_move.flush()
+    with open("move_history.txt", "a") as f:
+        f.write(f"{current_player}: {move}\n")
+
+    # # Write move entry into move history text file
+    # file_move.write(f"{current_player}: {move}\n")
+    # file_move.flush()
 
 def display_turn_duration_log(player, duration):
     """
     Updates the time history display with the time taken by the player for their move.
     """
-    global file_time
+    # global file_time
 
     time_history_text.config(state="normal")  # Enable editing
     time_history_text.insert(tk.END, f"{player}: {duration:.2f} sec\n")  # Append the move duration
@@ -672,8 +677,12 @@ def display_turn_duration_log(player, duration):
     time_history_text.config(state="disabled")  # Disable editing
 
     # Write time entry into time history text file
-    file_time.write(f"{player}: {duration:.2f} sec\n")
-    file_time.flush()
+    with open("time_history.txt", "a") as f:
+        f.write(f"{player}: {duration:.2f} sec\n")
+
+    # # Write time entry into time history text file
+    # file_time.write(f"{player}: {duration:.2f} sec\n")
+    # file_time.flush()
 
 
 def process_move_command():
