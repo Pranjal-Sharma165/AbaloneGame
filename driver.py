@@ -863,7 +863,9 @@ def process_move_command():
         update_move()
 
     except Exception as e:
+        toggle_pause()
         messagebox.showerror("Invalid Move", str(e))
+        toggle_pause()
     finally:
         move_entry.delete(0, tk.END)
 
