@@ -33,10 +33,10 @@ cdef INT64_t[:, :] DIRECTIONS_VIEW = DIRECTIONS
 
 WEIGHTS = {
     "marble_diff": 1.0,
-    "centrality": 1.91,
-    "push_ability": 1.45,
-    "formation": 0.115,
-    "connectivity": 0.151
+    "centrality": 0.16,
+    "push_ability": 0.35,
+    "formation": 0.030,
+    "connectivity": 1.35
 }
 
 VALID_COORDS = np.array([
@@ -85,11 +85,11 @@ RING4_COORDS = np.array([
     (2, 6), (1, 1), (1, 2), (1, 3), (1, 4), (1, 5)
 ], dtype=DTYPE)
 
-cdef double CENTER_SCORE = 10.0
-cdef double RING1_SCORE = 7.0
-cdef double RING2_SCORE = 6.0
-cdef double RING3_SCORE = 2.5
-cdef double RING4_SCORE = -1.0
+cdef double CENTER_SCORE = 7.0
+cdef double RING1_SCORE = 4.5
+cdef double RING2_SCORE = 2.8
+cdef double RING3_SCORE = 1.3
+cdef double RING4_SCORE = -1.5
 
 CENTRALITY_MAP = {}
 for coord in CENTER_COORDS:
@@ -252,11 +252,11 @@ cdef inline double single_marble_penalty(tuple move_key):
         return 0.0
 
     if length == 1:
-        return -6.5
+        return -5.0
     elif length == 2:
-        return 2.2
-    elif length == 3:
         return 3.3
+    elif length == 3:
+        return 4.4
 
 
 @cython.boundscheck(False)
@@ -277,9 +277,9 @@ cdef double evaluate_connectivity(list friend_positions, set friend_set):
                 connection_count += 1
 
         if connection_count == 0:
-            conn_score -= 7.0
+            conn_score -= 6.0
         elif connection_count == 1:
-            conn_score -= 3.0
+            conn_score -= 2.5
 
     return conn_score
 
@@ -307,10 +307,10 @@ cdef double evaluate_hexagon_formation(list friend_positions, set friend_set):
             positions_with_neighbors += 1
 
         if neighbor_count == 6:
-            hexagon_score += 3.0
+            hexagon_score += 1.5
 
         elif neighbor_count >= 4:
-            hexagon_score += neighbor_count * 0.3
+            hexagon_score += neighbor_count * 0.2
 
     cdef double avg_connections = 0.0
     if positions_with_neighbors > 0:
@@ -337,9 +337,9 @@ cdef double evaluate_hexagon_formation(list friend_positions, set friend_set):
                 pos4 = (pos2[0] + dir2[0], pos2[1] + dir2[1])
 
                 if pos3 in friend_set and pos4 in friend_set:
-                    rectangle_score += 2.0
+                    rectangle_score += 1.1
 
-    rectangle_score = min(rectangle_score, 7.0)
+    rectangle_score = min(rectangle_score, 6.0)
 
     return hexagon_score + rectangle_score
 
@@ -437,7 +437,7 @@ cdef double evaluate_push_ability_strength(list groups, set player_set, set oppo
             final_pos = (push_pos[0] + diff1[0], push_pos[1] + diff1[1])
 
             if not is_valid_coord(final_pos):
-                strength += 25.0
+                strength += 20.0
             elif final_pos not in player_set and final_pos not in opponent_set:
 
                 if push_pos in outer_ring:
@@ -458,14 +458,14 @@ cdef double calculate_centrality(list friend_positions, list enemy_positions, se
     cdef tuple pos
     cdef double score
 
-    cdef double scale_factor = 1.5
+    cdef double scale_factor = 0.075
 
     for pos in friend_positions:
-        score = CENTRALITY_MAP.get(pos, 0.0) * scale_factor
+        score = CENTRALITY_MAP.get(pos, 1.0) * scale_factor
         friend_centrality += score
 
     for pos in enemy_positions:
-        score = CENTRALITY_MAP.get(pos, 0.0) * scale_factor
+        score = CENTRALITY_MAP.get(pos, 1.0) * scale_factor
         enemy_centrality += score
 
     cdef int friend_marbles_left = len(friend_positions)
@@ -480,33 +480,33 @@ cdef double calculate_centrality(list friend_positions, list enemy_positions, se
         enemy_weight = 1.0 - (14 - enemy_marbles_left) * 0.03
 
     if friend_marbles_left > 0:
-        friend_centrality = friend_centrality / friend_marbles_left * friend_weight
+        friend_centrality = friend_centrality * (friend_marbles_left * friend_weight)
 
     if enemy_marbles_left > 0:
-        enemy_centrality = enemy_centrality / enemy_marbles_left * enemy_weight
+        enemy_centrality = enemy_centrality * (enemy_marbles_left * enemy_weight)
 
-    return 7.0 * (friend_centrality - enemy_centrality)
+    return friend_centrality - enemy_centrality
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef double evaluate_marble_difference(int friend_count, int enemy_count):
-    cdef double marble_diff_score
-    cdef int enemy_off, friend_off
+    cdef double marble_diff_score = 0.0
+    cdef int friend_off, enemy_off
     cdef double enemy_off_score, friend_off_score
 
     enemy_off = 14 - enemy_count
     enemy_off_score = 600 * enemy_off
-
     friend_off = 14 - friend_count
     friend_off_score = -650 * friend_off
 
-    marble_diff_score = enemy_off_score + friend_off_score
-
     if friend_count <= 8:
-        return -10000.0, {'marble_diff': -10000.0}
+        return -10000.0
     if enemy_count <= 8:
-        return 10000.0, {'marble_diff': 10000.0}
+        return 10000.0
+
+
+    marble_diff_score += (enemy_off_score + friend_off_score)
 
     return marble_diff_score
 
@@ -540,11 +540,9 @@ def evaluate_board_with_features(list board, str player):
     cdef list friend_groups = find_groups_fast(friend_marbles)
     cdef list enemy_groups = find_groups_fast(enemy_marbles)
 
-    push_ability_score = evaluate_push_ability_strength(friend_groups, friend_set, enemy_set) - \
-                         evaluate_push_ability_strength(enemy_groups, enemy_set, friend_set)
+    push_ability_score = evaluate_push_ability_strength(friend_groups, friend_set, enemy_set)
 
-    hexagon_score = evaluate_hexagon_formation(friend_positions, friend_set) - \
-                    evaluate_hexagon_formation(enemy_positions, enemy_set) * 0.8
+    hexagon_score = evaluate_hexagon_formation(friend_positions, friend_set) * 0.75
 
     connectivity_score = evaluate_connectivity(friend_positions, friend_set) - \
                          evaluate_connectivity(enemy_positions, enemy_set) * 0.9
@@ -592,13 +590,7 @@ def move_ordering_score(list move, int depth, tuple prev_best=None):
         return float('inf')
 
     if depth in killer_moves and move_key_str in killer_moves[depth]:
-        score += 10000.0 + float(killer_moves[depth][move_key_str])
-
-    if move_key_str in history_table:
-        score += float(history_table[move_key_str])
-
-    if len(move[0]) != 14 or len(move[1]) != 14:
-        score += 500.0
+        score += 100.0 + float(killer_moves[depth][move_key_str])
 
     return score
 
@@ -620,7 +612,7 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
     cdef np.uint64_t board_hash
     cdef str tt_key
     cdef tuple result, value
-    cdef double eval_score, best_score, score, move_type_bonus
+    cdef double eval_score, best_score, score
     cdef list moves_items
     cdef str next_player, current_color
     cdef object best_move = None
@@ -677,16 +669,12 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
         best_score = float('-inf')
         for move_key, move in moves_items:
 
-            move_type_bonus = single_marble_penalty(move_key)
-
             try:
                 score, _, _ = alpha_beta_with_time_check(
                     move, depth - 1, alpha, beta, next_player, maximizing_player,
                     move_generator, time_start, time_limit,
                     (best_move_key, best_move) if best_move else None
                 )
-
-                score += move_type_bonus
 
                 if score > best_score:
                     best_score = score
@@ -712,16 +700,12 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
         best_score = float('inf')
         for move_key, move in moves_items:
 
-            move_type_bonus = single_marble_penalty(move_key)
-
             try:
                 score, _, _ = alpha_beta_with_time_check(
                     move, depth - 1, alpha, beta, next_player, maximizing_player,
                     move_generator, time_start, time_limit,
                     (best_move_key, best_move) if best_move else None
                 )
-
-                score += move_type_bonus
 
                 if score < best_score:
                     best_score = score
@@ -751,7 +735,7 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
 
 def find_best_move(list board, str player, int depth=4, double time_limit=5.0, object from_move_generator=None):
 
-    cdef int min_depth = 3
+    cdef int min_depth = 2
     cdef double start_time, current_time, elapsed, max_search_time, depth_start_time, remaining_time
     cdef str move_str
     cdef double best_score, score
