@@ -1,0 +1,9 @@
+Black: 3.49 sec
+White: 4.57 sec
+Black: 1.67 sec
+White: 3.27 sec
+Black: 3.89 sec
+White: 4.68 sec
+Black: 4.15 sec
+White: 7.07 sec
+Black: 4.33 sec

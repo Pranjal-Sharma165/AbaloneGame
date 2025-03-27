@@ -3,8 +3,6 @@ from tkinter import messagebox, ttk
 import math
 import time
 import copy
-import os
-import random
 
 from move import convert_to_dictionary, convert_board_format, parse_move_input, move_validation, move_marbles
 
@@ -121,7 +119,6 @@ player2_time_entry = None
 global game_mode_box
 file_move = None # Text file variable for move history
 file_time = None # Text file variable for time history
-first_move = True # Sets first move for random move generation
 
 def open_text_files():
     """
@@ -162,11 +159,10 @@ def add_undo_tag_to_text_file(filename):
 
         if len(lines) > 0:
             # Append (undone) tag to last line
-            lines[-1] = lines[-1].strip() + " (undone)\n"
+            lines[-1] = lines[-1].rstrip() + " " + "(undone)" + "\n"
 
             with open(filename, "w") as file:
                 file.writelines(lines)
-                file.flush()
             # print(f"Last line removed successfully.")
         else:
             print("No line to remove.")
@@ -644,7 +640,6 @@ def revert_info():
     # Reset turn duration and total game timer
     if move_start_time is not None:
         total_game_time = move_start_time - game_start_time - total_pause_duration
-        game_start_time += time.time() - move_start_time
         timer_label.config(text=f"Time: {int(total_game_time)}s")
         move_start_time = time.time()
 
@@ -653,7 +648,7 @@ def display_ai_move_log(move):
     """
     Updates the move history display with the latest move.
     """
-    # global file_move
+    global file_move
 
     move_history_text.config(state="normal")  # Enable editing
     move_history_text.insert(tk.END, f"{current_player}: {move}\n")  # Append the move
@@ -661,18 +656,14 @@ def display_ai_move_log(move):
     move_history_text.config(state="disabled")  # Disable editing
 
     # Write move entry into move history text file
-    with open("move_history.txt", "a") as f:
-        f.write(f"{current_player}: {move}\n")
-
-    # # Write move entry into move history text file
-    # file_move.write(f"{current_player}: {move}\n")
-    # file_move.flush()
+    file_move.write(f"{current_player}: {move}\n")
+    file_move.flush()
 
 def display_turn_duration_log(player, duration):
     """
     Updates the time history display with the time taken by the player for their move.
     """
-    # global file_time
+    global file_time
 
     time_history_text.config(state="normal")  # Enable editing
     time_history_text.insert(tk.END, f"{player}: {duration:.2f} sec\n")  # Append the move duration
@@ -680,16 +671,12 @@ def display_turn_duration_log(player, duration):
     time_history_text.config(state="disabled")  # Disable editing
 
     # Write time entry into time history text file
-    with open("time_history.txt", "a") as f:
-        f.write(f"{player}: {duration:.2f} sec\n")
-
-    # # Write time entry into time history text file
-    # file_time.write(f"{player}: {duration:.2f} sec\n")
-    # file_time.flush()
+    file_time.write(f"{player}: {duration:.2f} sec\n")
+    file_time.flush()
 
 
 def process_move_command():
-    global white_score, black_score, previous_board, prev_white_score, prev_black_score, is_paused, current_board, first_move
+    global white_score, black_score, previous_board, prev_white_score, prev_black_score, is_paused, current_board
 
     # save a copy of the current board state before the next move is applied
     previous_board = copy.deepcopy(current_board)
@@ -710,43 +697,31 @@ def process_move_command():
 
         current_player_color = "black" if current_player == "Black" else "white"
 
-        from AI import find_best_move, get_move_string_from_key
+        from AI import find_best_move
         from next_move_generator import generate_all_next_moves
 
-        ai_time_limit = 12
+        ai_time_limit = 10
 
         next_move_label.config(text="AI is thinking...")
         root.update()
 
-        if first_move:
-            new_boards = generate_all_next_moves(board_list, "BLACK")
-            new_board_list = list(new_boards.values())
-            new_moves_list = list(new_boards.keys())
-            print(new_board_list)
-            random_number = random.randint(0, len(new_board_list)-1)
-            random_board = new_board_list[random_number]
-            random_move = new_moves_list[random_number]
-            move_str = get_move_string_from_key(random_move)
-            print(move_str)
-            new_board_dict = convert_to_dictionary(random_board, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-            first_move = False
-            marbles_pushed_off = 0
-        else:
-            new_board_list, move_str = find_best_move(
-                board_list,
-                current_player_color,
-                depth=2,
-                time_limit=ai_time_limit,
-                from_move_generator=generate_all_next_moves
-            )
-            new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-            old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-            new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
-            marbles_pushed_off = old_marbles - new_marbles
+        new_board_list, move_str, _ = find_best_move(
+            board_list,
+            current_player_color,
+            depth=3,
+            time_limit=ai_time_limit,
+            from_move_generator=generate_all_next_moves
+        )
+
+
+        new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
 
         display_ai_move_log(move_str)
 
         next_move_label.config(text="Type your move")
+        old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
+        new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+        marbles_pushed_off = old_marbles - new_marbles
 
         if marbles_pushed_off > 0:
             if current_player == "Black":
@@ -769,58 +744,46 @@ def process_move_command():
         on opponent's turn, you can type 1, enter. on your turn, you can type 2, enter.
         
         """
-        board_list = convert_board_format(current_board)
+        # board_list = convert_board_format(current_board)
+        #
+        # current_player_color = "black" if current_player == "Black" else "white"
+        #
+        # from AI import find_best_move
+        # from next_move_generator import generate_all_next_moves
+        #
+        # ai_time_limit = 12
+        #
+        # next_move_label.config(text="AI is thinking...")
+        # root.update()
+        #
+        # new_board_list, move_str = find_best_move(
+        #     board_list,
+        #     current_player_color,
+        #     depth=4,
+        #     time_limit=ai_time_limit,
+        #     from_move_generator=generate_all_next_moves
+        # )
 
-        current_player_color = "black" if current_player == "Black" else "white"
 
-        from AI2_michael import find_best_move, get_move_string_from_key
-        from next_move_generator import generate_all_next_moves
+        # new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
+        #
+        # display_ai_move_log(move_str)
+        #
+        # next_move_label.config(text="Type your move")
+        # old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
+        # new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+        # marbles_pushed_off = old_marbles - new_marbles
 
-        ai_time_limit = 12
-
-        next_move_label.config(text="AI is thinking...")
-        root.update()
-
-        if first_move:
-            new_boards = generate_all_next_moves(board_list, "BLACK")
-            new_board_list = list(new_boards.values())
-            new_moves_list = list(new_boards.keys())
-            print(new_board_list)
-            random_number = random.randint(0, len(new_board_list)-1)
-            random_board = new_board_list[random_number]
-            random_move = new_moves_list[random_number]
-            move_str = get_move_string_from_key(random_move)
-            print(move_str)
-            new_board_dict = convert_to_dictionary(random_board, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-            first_move = False
-            marbles_pushed_off = 0
-        else:
-            new_board_list, move_str = find_best_move(
-                board_list,
-                current_player_color,
-                depth=2,
-                time_limit=ai_time_limit,
-                from_move_generator=generate_all_next_moves
-            )
-            new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-            old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-            new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
-            marbles_pushed_off = old_marbles - new_marbles
-
-        display_ai_move_log(move_str)
-
-        next_move_label.config(text="Type your move")
-
-        if marbles_pushed_off > 0:
-            if current_player == "Black":
-                white_score += marbles_pushed_off
-                white_score_label.config(text=f"White Marbles Lost: {white_score} ")
-            else:
-                black_score += marbles_pushed_off
-                black_score_label.config(text=f"Black Marbles Lost: {black_score}")
-
-        current_board = new_board_dict
-        draw_board(current_board)
+        # if marbles_pushed_off > 0:
+        #     if current_player == "Black":
+        #         white_score += marbles_pushed_off
+        #         white_score_label.config(text=f"White Marbles Lost: {white_score} ")
+        #     else:
+        #         black_score += marbles_pushed_off
+        #         black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+        #
+        # current_board = new_board_dict
+        # draw_board(current_board)
         update_move()
 
         move_entry.delete(0, tk.END)
@@ -863,9 +826,7 @@ def process_move_command():
         update_move()
 
     except Exception as e:
-        toggle_pause()
         messagebox.showerror("Invalid Move", str(e))
-        toggle_pause()
     finally:
         move_entry.delete(0, tk.END)
 
