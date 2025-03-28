@@ -642,6 +642,7 @@ def revert_info():
     # Reset turn duration and total game timer
     if move_start_time is not None:
         total_game_time = move_start_time - game_start_time - total_pause_duration
+        game_start_time += time.time() - move_start_time
         timer_label.config(text=f"Time: {int(total_game_time)}s")
         move_start_time = time.time()
 
@@ -650,7 +651,7 @@ def display_ai_move_log(move):
     """
     Updates the move history display with the latest move.
     """
-    global file_move
+    # global file_move
 
     move_history_text.config(state="normal")  # Enable editing
     move_history_text.insert(tk.END, f"{current_player}: {move}\n")  # Append the move
@@ -658,8 +659,12 @@ def display_ai_move_log(move):
     move_history_text.config(state="disabled")  # Disable editing
 
     # Write move entry into move history text file
-    file_move.write(f"{current_player}: {move}\n")
-    file_move.flush()
+    with open("move_history.txt", "a") as f:
+        f.write(f"{current_player}: {move}\n")
+
+    # # Write move entry into move history text file
+    # file_move.write(f"{current_player}: {move}\n")
+    # file_move.flush()
 
 def display_turn_duration_log(player, duration):
     """
@@ -673,8 +678,12 @@ def display_turn_duration_log(player, duration):
     time_history_text.config(state="disabled")  # Disable editing
 
     # Write time entry into time history text file
-    file_time.write(f"{player}: {duration:.2f} sec\n")
-    file_time.flush()
+    with open("time_history.txt", "a") as f:
+        f.write(f"{player}: {duration:.2f} sec\n")
+
+    # # Write time entry into time history text file
+    # file_time.write(f"{player}: {duration:.2f} sec\n")
+    # file_time.flush()
 
 
 def process_move_command():
