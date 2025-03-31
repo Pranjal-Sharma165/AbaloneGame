@@ -43,7 +43,6 @@ class BoardIO:
         :param filename: The filename from which to load the board configuration.
         :return: A tuple (board, turn) where board is a dictionary representing the board state, and turn is a string ("BLACK" or "WHITE").
         """
-        # 초기화: 모든 위치를 "Blank"로 설정
         board = {coord: "Blank" for coord in BoardIO.BOARD_SAMPLE.keys()}
 
         try:
@@ -54,24 +53,20 @@ class BoardIO:
                 print(f"Warning: File {filename} has less than 2 lines")
                 return board, "BLACK"
 
-            # 턴 결정 (대문자로 변환)
             turn_line = lines[0].strip().lower()
             turn = "BLACK" if turn_line == "b" else "WHITE" if turn_line == "w" else "BLACK"
 
-            # 토큰 파싱
             tokens_line = lines[1].strip()
             for token in tokens_line.split(","):
-                if len(token) < 3:  # 최소 길이 확인 (예: A1b)
+                if len(token) < 3:
                     continue
 
-                # 마지막 문자를 색상으로, 나머지를 좌표로 사용
                 coord, color_token = token[:-1], token[-1].lower()
 
-                # 색상 매핑
                 if color_token == "b":
-                    board[coord] = "#8A8A8A"  # 검은색 구슬
+                    board[coord] = "#8A8A8A"
                 elif color_token == "w":
-                    board[coord] = "#D9D9D9"  # 흰색 구슬
+                    board[coord] = "#D9D9D9"
 
             return board, turn
 
@@ -80,20 +75,6 @@ class BoardIO:
             return board, "BLACK"
 
 
-if __name__ == "__main__":
-    board, turn = BoardIO.import_current_text_to_board("output/Test1.input")
-    print(f"Turn: {turn}")  # "Black" 또는 "White"
-
-    # 대소문자 변환 후 사용
-    turn_upper = turn.upper()  # "BLACK" 또는 "WHITE"
-    print(f"Turn (upper): {turn_upper}")
-
-    # 가능한 이동 생성
-    board_list = mc.convert_board_format(board)
-    black_moves = nmgc.generate_all_next_moves(board_list, "BLACK")
-    white_moves = nmgc.generate_all_next_moves(board_list, "WHITE")
-    print(f"Black moves: {len(black_moves)}")
-    print(f"White moves: {len(white_moves)}")
 
 
 

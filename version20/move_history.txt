@@ -1,0 +1,2 @@
+Black: AI: A5B5C5,B5C5D5
+White: RANDOM: G6G7,F5F6 (undone)

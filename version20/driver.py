@@ -681,15 +681,11 @@ def display_turn_duration_log(player, duration):
     with open("time_history.txt", "a") as f:
         f.write(f"{player}: {duration:.2f} sec\n")
 
-    # # Write time entry into time history text file
-    # file_time.write(f"{player}: {duration:.2f} sec\n")
-    # file_time.flush()
-
 
 def process_move_command():
-    global white_score, black_score, previous_board, prev_white_score, prev_black_score, is_paused, current_board, first_move
+    global white_score, black_score, previous_board, prev_white_score
+    global prev_black_score, is_paused, current_board, first_move
 
-    # save a copy of the current board state before the next move is applied
     previous_board = copy.deepcopy(current_board)
     prev_white_score = copy.deepcopy(white_score)
     prev_black_score = copy.deepcopy(black_score)
@@ -700,167 +696,151 @@ def process_move_command():
 
     move_text = move_entry.get().strip()
 
-    if move_text.lower() == "save board" or move_text.lower() == "next move":
-        pass
+    if move_text == "0":
+        execute_random_move()
+    elif move_text == "1":
+        execute_ai_move()
+    else:
+        execute_manual_move(move_text)
 
-    if move_text == "1":
-        board_list = convert_board_format(current_board)
+    move_entry.delete(0, tk.END)
 
-        current_player_color = "black" if current_player == "Black" else "white"
 
-        from AI import find_best_move, get_move_string_from_key
-        from next_move_generator_cy import generate_all_next_moves
+def execute_random_move():
+    global current_board, white_score, black_score
 
-        ai_time_limit = 10
+    board_list = convert_board_format(current_board)
+    current_player_color = "BLACK" if current_player == "Black" else "WHITE"
 
-        next_move_label.config(text="AI is thinking...")
-        root.update()
+    from next_move_generator_cy import generate_all_next_moves
+    from AI import get_move_string_from_key
 
-        if first_move:
-            new_boards = generate_all_next_moves(board_list, "BLACK")
-            new_board_list = list(new_boards.values())
-            new_moves_list = list(new_boards.keys())
-            print(new_board_list)
-            random_number = random.randint(0, len(new_board_list)-1)
-            random_board = new_board_list[random_number]
-            random_move = new_moves_list[random_number]
-            move_str = get_move_string_from_key(random_move)
-            print(move_str)
-            new_board_dict = convert_to_dictionary(random_board, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-            first_move = False
-            marbles_pushed_off = 0
-        else:
-            new_board_list, move_str, _, _ = find_best_move(
-                board_list,
-                current_player_color,
-                depth=5,
-                time_limit=ai_time_limit,
-                from_move_generator=generate_all_next_moves
-            )
-            new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-            old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-            new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
-            marbles_pushed_off = old_marbles - new_marbles
+    new_boards = generate_all_next_moves(board_list, current_player_color)
 
-        display_ai_move_log(move_str)
-
-        next_move_label.config(text="Type your move")
-
-        if marbles_pushed_off > 0:
-            if current_player == "Black":
-                white_score += marbles_pushed_off
-                white_score_label.config(text=f"White Marbles Lost: {white_score} ")
-            else:
-                black_score += marbles_pushed_off
-                black_score_label.config(text=f"Black Marbles Lost: {black_score}")
-
-        current_board = new_board_dict
-        draw_board(current_board)
-        update_move()
-
-        move_entry.delete(0, tk.END)
+    if not new_boards:
+        messagebox.showinfo("No Moves", "No valid moves available.")
         return
 
-    if move_text == "2":
-        """
-        the 2nd
-        """
+    new_moves_list = list(new_boards.keys())
+    random_number = random.randint(0, len(new_moves_list) - 1)
+    random_move = new_moves_list[random_number]
+    random_board = new_boards[random_move]
 
-        # current_player_color = "black" if current_player == "Black" else "white"
-        #
-        # from AI import find_best_move, get_move_string_from_key
-        # from next_move_generator import generate_all_next_moves
-        #
-        # ai_time_limit = 10
-        #
-        # next_move_label.config(text="AI is thinking...")
-        # root.update()
-        #
-        # if first_move:
-        #     new_boards = generate_all_next_moves(board_list, "BLACK")
-        #     new_board_list = list(new_boards.values())
-        #     new_moves_list = list(new_boards.keys())
-        #     print(new_board_list)
-        #     random_number = random.randint(0, len(new_board_list)-1)
-        #     random_board = new_board_list[random_number]
-        #     random_move = new_moves_list[random_number]
-        #     move_str = get_move_string_from_key(random_move)
-        #     print(move_str)
-        #     new_board_dict = convert_to_dictionary(random_board, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-        #     first_move = False
-        #     marbles_pushed_off = 0
-        # else:
-        #     new_board_list, move_str = find_best_move(
-        #         board_list,
-        #         current_player_color,
-        #         depth=2,
-        #         time_limit=ai_time_limit,
-        #         from_move_generator=generate_all_next_moves
-        #     )
-        #     new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
-        #     old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-        #     new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
-        #     marbles_pushed_off = old_marbles - new_marbles
-        #
-        # display_ai_move_log(move_str)
-        #
-        # next_move_label.config(text="Type your move")
-        #
-        # if marbles_pushed_off > 0:
-        #     if current_player == "Black":
-        #         white_score += marbles_pushed_off
-        #         white_score_label.config(text=f"White Marbles Lost: {white_score} ")
-        #     else:
-        #         black_score += marbles_pushed_off
-        #         black_score_label.config(text=f"Black Marbles Lost: {black_score}")
-        #
-        # current_board = new_board_dict
-        # draw_board(current_board)
-        # update_move()
-        #
-        # move_entry.delete(0, tk.END)
-        # return
+    move_str = get_move_string_from_key(random_move)
+    new_board_dict = convert_to_dictionary(random_board, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
+
+    display_ai_move_log(f"RANDOM: {move_str}")
+
+    old_marbles = len(board_list[0]) + len(board_list[1])
+    new_marbles = len(random_board[0]) + len(random_board[1])
+    marbles_pushed_off = old_marbles - new_marbles
+
+    if update_score_and_check_game_end(marbles_pushed_off, f"RANDOM: {move_str}"):
+        return  # Game ended
+
+    current_board = new_board_dict
+    draw_board(current_board)
+    update_move()
+
+
+def execute_ai_move():
+    global current_board, white_score, black_score, first_move
+
+    board_list = convert_board_format(current_board)
+    current_player_color = "black" if current_player == "Black" else "white"
+
+    from AI import find_best_move
+    from next_move_generator_cy import generate_all_next_moves
+
+    ai_time_limit = 3
+
+    next_move_label.config(text="AI is thinking...")
+    root.update()
+
+    new_board_list, move_str, _, total_time = find_best_move(
+        board_list,
+        current_player_color,
+        depth=5,
+        time_limit=ai_time_limit,
+        from_move_generator=generate_all_next_moves
+    )
+
+    if new_board_list is None:
+        messagebox.showinfo("AI Error", "AI could not find a valid move.")
+        return
+
+    new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
+
+    old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
+    new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+    marbles_pushed_off = old_marbles - new_marbles
+
+    display_ai_move_log(f"AI: {move_str}")
+    next_move_label.config(text="Type your move")
+
+    if update_score_and_check_game_end(marbles_pushed_off, f"AI: {move_str}"):
+        return
+
+    current_board = new_board_dict
+    draw_board(current_board)
+    update_move()
+
+
+def execute_manual_move(move_text):
+    global current_board, white_score, black_score
 
     try:
-        # Convert the current board dictionary to [black_marbles, white_marbles] format
         board_list = convert_board_format(current_board)
-
-        # Parse the move input to get source and destination coordinates
         source_coords, dest_coords = parse_move_input(move_text)
-
-        # Determine the current player's color
         current_player_color = "BLACK" if current_player == "Black" else "WHITE"
 
-        # Validate the move
         is_valid, reason = move_validation(source_coords, dest_coords, board_list, current_player_color)
-
         if not is_valid:
             raise ValueError(reason)
 
-        # Apply the move if it's valid
         new_board_list, marbles_pushed_off = move_marbles(source_coords, dest_coords, board_list, current_player_color)
-
-        # Convert the new board list back to dictionary format
         current_board = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
 
-        # Update the score if any marbles were pushed off
-        if marbles_pushed_off > 0:
-            if current_player_color == "BLACK":
-                white_score += marbles_pushed_off
-                white_score_label.config(text=f"White Marbles Lost: {white_score}")
-            else:
-                black_score += marbles_pushed_off
-                black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+        if update_score_and_check_game_end(marbles_pushed_off, move_text):
+            return
 
-        # Update the display with the new board
         display_ai_move_log(move_text)
+
         draw_board(current_board)
         update_move()
 
     except Exception as e:
         messagebox.showerror("Invalid Move", str(e))
-    finally:
-        move_entry.delete(0, tk.END)
+
+
+def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
+    global white_score, black_score
+
+    if marbles_pushed_off <= 0:
+        return False
+
+    if current_player == "Black":
+        white_score += marbles_pushed_off
+        white_score_label.config(text=f"White Marbles Lost: {white_score}")
+        if white_score >= 6:
+            messagebox.showinfo("Game Over",
+                                f"Black player wins. White lost 6 or more marbles.\n\n"
+                                f"Last move: {move_str}")
+            stop_game()
+            return True
+    else:
+        black_score += marbles_pushed_off
+        black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+        if black_score >= 6:
+            messagebox.showinfo("Game Over",
+                                f"White player wins. Black lost 6 or more marbles.\n\n"
+                                f"Last move: {move_str}")
+            stop_game()
+            return True
+
+    return False
+
+
 
 
 def update_time_fields(event=None):

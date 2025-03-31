@@ -18,12 +18,12 @@ STANDARD_BOARD_INIT = {
 
 
 start = time.time()
-board = mc.convert_board_format(BoardIO.import_current_text_to_board("./output/Test2.input")[0])
+board = mc.convert_board_format(BoardIO.import_current_text_to_board("./output/Test5.input")[0])
 end = time.time()
 print(f"Board conversion: {(end-start)*10000:.3f}ms")
 
 start = time.time()
-next_moves = nmgc.generate_all_next_moves(board, BoardIO.import_current_text_to_board("./output/Test2.input")[1])
+next_moves = nmgc.generate_all_next_moves(board, BoardIO.import_current_text_to_board("./output/Test5.input")[1])
 end = time.time()
 print(f"Generated {len(next_moves)} next moves in {end-start:.6f}s")
 

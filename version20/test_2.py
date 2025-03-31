@@ -20,8 +20,8 @@ STANDARD_BOARD_INIT = {
 }
 
 
-a = BoardIO.import_current_text_to_board("./output/Test5.input")[0]
-c = BoardIO.import_current_text_to_board("./output/Test5.input")[1]
+a = BoardIO.import_current_text_to_board("./output/Test2.input")[0]
+c = BoardIO.import_current_text_to_board("./output/Test2.input")[1]
 
 
 def test_move_validation():
