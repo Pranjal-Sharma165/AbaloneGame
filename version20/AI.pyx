@@ -700,19 +700,14 @@ cdef void find_groups_c(int * rows, int * cols, int count, int * board_lookup, C
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline double evaluate_marble_difference(int friend_count, int enemy_count) nogil:
-    
     cdef double score
-    cdef int friend_off = 14 - friend_count
-    cdef int enemy_off = 14 - enemy_count
-    cdef double enemy_off_score = 400 * enemy_off
-    cdef double friend_off_score = -360 * friend_off
+
+    score = 100 * (friend_count - enemy_count)
 
     if friend_count <= 8:
         score = -10000.0
     elif enemy_count <= 8:
         score = 10000.0
-    else:
-        score = enemy_off_score + friend_off_score
 
     return score
 
