@@ -408,7 +408,7 @@ def main():
 
     learning_rate = 0.06
     learning_rate_decay = 0.95
-    games_per_match = 5
+    games_per_match = 1
     time_limit = 3.0
     board_type = "belgian"
     max_depth = 3
