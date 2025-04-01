@@ -26,7 +26,6 @@ ctypedef np.int64_t INT64_t
 ctypedef np.float64_t FLOAT64_t
 ctypedef unsigned long long uint64_t
 
-# 가중치 관리를 위한 구조체 정의
 cdef struct EvaluationWeights:
     double marble_diff
     double centrality
@@ -39,11 +38,12 @@ cdef EvaluationWeights DEFAULT_WEIGHTS
 cdef void init_default_weights():
     global DEFAULT_WEIGHTS
 
-    DEFAULT_WEIGHTS.marble_diff = 1.000
-    DEFAULT_WEIGHTS.centrality = 0.291
-    DEFAULT_WEIGHTS.push_ability = 0.583
-    DEFAULT_WEIGHTS.formation = 0.607
-    DEFAULT_WEIGHTS.connectivity = 1.358
+    DEFAULT_WEIGHTS.marble_diff = 1.00
+    DEFAULT_WEIGHTS.centrality = 0.311
+    DEFAULT_WEIGHTS.push_ability = 0.622
+    DEFAULT_WEIGHTS.formation = 0.617
+    DEFAULT_WEIGHTS.connectivity = 1.131
+
 
 def set_evaluation_weights(dict weights_dict):
     
@@ -228,11 +228,11 @@ cdef void init_valid_coords_lookup():
         VALID_COORDS_LOOKUP[row][col] = 1
 
 cdef double CENTRALITY_MAP_C[10][10]
-cdef double CENTER_SCORE = 7.0
+cdef double CENTER_SCORE = 6.7
 cdef double RING1_SCORE = 4.5
 cdef double RING2_SCORE = 2.8
 cdef double RING3_SCORE = 1.3
-cdef double RING4_SCORE = -1.5
+cdef double RING4_SCORE = -1.3
 
 cdef void init_centrality_map_c():
     cdef int i, j
@@ -704,8 +704,8 @@ cdef inline double evaluate_marble_difference(int friend_count, int enemy_count)
     cdef double score
     cdef int friend_off = 14 - friend_count
     cdef int enemy_off = 14 - enemy_count
-    cdef double enemy_off_score = 600 * enemy_off
-    cdef double friend_off_score = -650 * friend_off
+    cdef double enemy_off_score = 400 * enemy_off
+    cdef double friend_off_score = -360 * friend_off
 
     if friend_count <= 8:
         score = -10000.0
@@ -795,10 +795,7 @@ cdef inline bint is_in_outer_ring_direct(int row, int col) nogil:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline double evaluate_push_ability(int *board_lookup) nogil:
-    
     cdef double push_score = 0.0
-    cdef int middle_count = 0
-    cdef int outer_count = 0
     cdef int row, col, idx
 
     for row in range(1, 10):
@@ -807,11 +804,9 @@ cdef inline double evaluate_push_ability(int *board_lookup) nogil:
             if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE and board_lookup[idx] == 2:
 
                 if is_in_middle_ring_direct(row, col):
-                    middle_count += 1
-                    push_score += 1.1
+                    push_score += 1.2
 
                 elif is_in_outer_ring_direct(row, col):
-                    outer_count += 1
                     push_score += 2.5
 
     return push_score
@@ -840,11 +835,15 @@ cdef inline double evaluate_formation(int *friend_rows, int *friend_cols, int fr
                     connection_count += 1
 
             if connection_count == 2:
-                formation_score += 1.2
+                formation_score += 1.0
             elif connection_count == 3:
-                formation_score += 1.7
+                formation_score += 1.25
             elif connection_count == 4:
-                formation_score += 0.5
+                formation_score += 1.55
+            elif connection_count == 5:
+                formation_score += 1.27
+            elif connection_count == 6:
+                formation_score += 1.3
 
     return formation_score * 0.8
 
@@ -872,7 +871,7 @@ cdef inline double evaluate_connectivity(int *friend_rows, int *friend_cols, int
                     connection_count += 1
 
             if connection_count == 0:
-                connectivity_score -= 6.0
+                connectivity_score -= 7.5
 
             elif connection_count == 1:
                 connectivity_score -= 4.0
@@ -887,7 +886,7 @@ cdef double evaluate_board_with_features_c(int *friend_rows, int *friend_cols, i
                                            int *board_lookup, CGroup *groups, int group_count,
                                            EvaluationWeights *weights) nogil:
     
-    cdef double scores[5]  # 각 평가 특성 점수를 저장하는 배열
+    cdef double scores[5]
     cdef int feature_idx
     cdef int num_features = 5
 
