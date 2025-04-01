@@ -810,7 +810,9 @@ def execute_manual_move(move_text):
         update_move()
 
     except Exception as e:
+        toggle_pause()
         messagebox.showerror("Invalid Move", str(e))
+        toggle_pause()
 
 
 def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
