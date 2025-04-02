@@ -4,6 +4,7 @@ import math
 import time
 import copy
 import random
+import threading
 
 from move_cy import convert_to_dictionary, convert_board_format, parse_move_input, move_validation, move_marbles
 
@@ -121,6 +122,9 @@ global game_mode_box
 file_move = None # Text file variable for move history
 file_time = None # Text file variable for time history
 first_move = True # Sets first move for random move generation
+player_time_limits = {"Black": float("inf"), "White": float("inf")}  # Set default limits
+current_countdown = 0
+timer_job = None
 
 def open_text_files():
     """
@@ -352,19 +356,20 @@ def reset_game_state():
 
 
 def reset_game():
-    """
-        Resets the game state and restarts the timer.
-    """
-    global is_running, time_history_text, move_history_text
+    global is_running, time_history_text, move_history_text, current_countdown
 
     # Re-open text files to log move and time history
     close_text_files()
     open_text_files()
 
     is_running = True
-    reset_game_state()
-    update_total_game_time()
+    reset_game_state()  # <-- This sets current_player = "Black"
+
+    current_countdown = player_time_limits[current_player]
+    countdown_label.config(text=f"Time Left: {int(current_countdown)}s")
+
     start_timer()
+
 
 def stop_game():
     """
@@ -390,17 +395,17 @@ def stop_game():
 
 
 def toggle_pause():
-    global is_paused, pause_time, move_start_time, total_pause_duration
+    global is_paused, pause_time, move_start_time, total_pause_duration, timer_job
 
     if is_paused:
+        # Resuming the game
         is_paused = False
         configure_button(pause_button, "#9C27B0", "white")
         pause_button.config(text="Pause Game")
 
         if pause_time is not None:
             pause_duration = time.time() - pause_time
-            total_pause_duration += pause_duration  # Accumulate pause duration
-
+            total_pause_duration += pause_duration
             move_start_time += pause_duration
 
         pause_time = None
@@ -408,7 +413,12 @@ def toggle_pause():
         # Re-enable UI elements
         move_entry.config(state=tk.NORMAL)
         undo_button.config(state=tk.NORMAL)
+
+        # Restart countdown
+        start_timer()
+
     else:
+        # Pausing the game
         is_paused = True
         configure_button(pause_button, "#FF6347", "white")
         pause_button.config(text="Resume Game")
@@ -418,41 +428,70 @@ def toggle_pause():
         move_entry.config(state=tk.DISABLED)
         undo_button.config(state=tk.DISABLED)
 
-def update_total_game_time():
-    global game_start_time, is_paused, is_running
-    if not is_running:
-        return
+        # Cancel the countdown
+        if timer_job:
+            root.after_cancel(timer_job)
+            timer_job = None
 
-    root.after(1000, update_total_game_time)
 
-    if game_start_time and not is_paused:
-        elapsed_time = time.time() - game_start_time - total_pause_duration
-        timer_label.config(text=f"Time: {int(elapsed_time)}s")
+# def update_total_game_time():
+#     global game_start_time, is_paused, is_running
+#     if not is_running:
+#         return
+#
+#     root.after(1000, update_total_game_time)
+#
+#     if game_start_time and not is_paused:
+#         elapsed_time = time.time() - game_start_time - total_pause_duration
+#         timer_label.config(text=f"Time: {int(elapsed_time)}s")
+
+# def start_timer():
+#     global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit, is_running, message_timer
+#     if is_paused or not is_running:
+#         return
+#
+#     if move_start_time is None:
+#         move_start_time = time.time()  # Start the timer only if it hasn't started
+#
+#     if total_game_time is None:
+#         total_game_time = 0
+#         game_start_time = time.time()
+#         timer_label.config(text=f"Time: {int(total_game_time)}s")
+#     else:
+#         if pause_time is not None:
+#             # Correct game time calculation: Only subtract total pause duration once
+#             total_game_time = time.time() - game_start_time - total_pause_duration
+#         else:
+#             total_game_time = time.time() - game_start_time
+#
+#     if move_time_limit != float("inf"):
+#         message_timer = root.after(move_time_limit * 1000, time_up)
+#         return
+#
+#     root.after(1000, start_timer)  # Call again after 1 second
 
 def start_timer():
-    global move_start_time, total_game_time, total_pause_duration, pause_time, game_start_time, move_time_limit, is_running, message_timer
-    if is_paused or not is_running:
+    global current_countdown, is_running, timer_job
+
+    if not is_running or is_paused:
         return
 
-    if move_start_time is None:
-        move_start_time = time.time()  # Start the timer only if it hasn't started
+    # Cancel previous timer if still running
+    if timer_job:
+        root.after_cancel(timer_job)
+        timer_job = None
 
-    if total_game_time is None:
-        total_game_time = 0
-        game_start_time = time.time()
-        timer_label.config(text=f"Time: {int(total_game_time)}s")
+    # If countdown reaches 0, show popup and reset
+    if current_countdown <= 0:
+        messagebox.showwarning("Time Up!", f"{current_player}'s time is up! Timer is resetting.")
+        current_countdown = player_time_limits[current_player]
+        countdown_label.config(text=f"Time Left: {int(current_countdown)}s")
     else:
-        if pause_time is not None:
-            # Correct game time calculation: Only subtract total pause duration once
-            total_game_time = time.time() - game_start_time - total_pause_duration
-        else:
-            total_game_time = time.time() - game_start_time
+        countdown_label.config(text=f"Time Left: {int(current_countdown)}s")
+        current_countdown -= 1
 
-    if move_time_limit != float("inf"):
-        message_timer = root.after(move_time_limit * 1000, time_up)
-        return
-
-    root.after(1000, start_timer)  # Call again after 1 second
+    # Schedule the next tick
+    timer_job = root.after(1000, start_timer)
 
 
 def time_up():
@@ -484,9 +523,12 @@ def update_move():
     # Update the move counter label
     move_counter_label.config(text=f"Moves: {move_counts}")
     end_turn()
+    move_entry.delete(0, tk.END)
+
 
 def end_turn():
     global current_player, move_start_time, is_paused, pause_time, game_start_time, total_pause_duration, total_game_time
+    global current_countdown
 
     if move_start_time is not None:
         move_duration = time.time() - move_start_time
@@ -495,24 +537,112 @@ def end_turn():
 
         move_start_time = time.time()
 
+    # current_player = "White" if current_player == "Black" else "Black"
+    # is_paused = False
+    # pause_time = None
+    # update_turn_display()
+    # start_timer()
+
     current_player = "White" if current_player == "Black" else "Black"
     is_paused = False
     pause_time = None
     update_turn_display()
+
+    current_countdown = player_time_limits[current_player]
+    countdown_label.config(text=f"Time Left: {int(current_countdown)}s")
+
     start_timer()
+
+
+# def start_game():
+#     global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit, is_running
+#
+#     # Open text files to store move history and time history
+#     open_text_files()
+#
+#     try:
+#         max_moves = int(max_moves_entry.get())
+#     except ValueError:
+#         messagebox.showerror("Invalid Input", "Please enter a valid number for max moves.")
+#         return
+#
+#     # Ensure game_mode_box exists before using it
+#     if 'game_mode_box' not in globals():
+#         messagebox.showerror("Error", "Game Mode selection is missing!")
+#         return
+#
+#     try:
+#         selected_mode = game_mode_box.get()
+#     except Exception as e:
+#         messagebox.showerror("Error", f"Game Mode selection is missing! ({str(e)})")
+#         return
+#
+#     if selected_mode not in ["Computer VS Player", "Player VS Player", "Computer VS Computer"]:
+#         messagebox.showerror("Invalid Input", "Please select a valid game mode.")
+#         return
+#
+#     # Extract time limits
+#     time_player1 = player1_time_entry.get() if player1_time_entry else "i"
+#     time_player2 = player2_time_entry.get() if player2_time_entry else "i"
+#
+#     # Convert time to int or set to infinity
+#     time_player1 = int(time_player1) if time_player1.isdigit() else float("inf")
+#     time_player2 = int(time_player2) if time_player2.isdigit() else float("inf")
+#
+#     player_time_limits["Black"] = time_player1
+#     player_time_limits["White"] = time_player2
+#
+#     # Now use these values in your game logic
+#
+#     total_pause_duration = 0
+#     is_paused = False
+#     move_start_time = time.time()
+#     game_start_time = time.time()
+#
+#     pause_button.config(state=tk.NORMAL, text="Pause Game")
+#     is_running = True
+#     update_total_game_time()
+#
+#     start_frame.pack_forget()
+#     top_frame.pack(ipady=5, pady=3)
+#     status_frame.pack(pady=5, ipadx=254)
+#     canvas.pack()
+#     move_history_frame.place(relheight=0.5, relx=0.15, rely=0.12)
+#     time_history_frame.place(relheight=0.509, relx=0.85, rely=0.375, anchor="e")
+#     bottom_frame.pack(ipadx=46, ipady=5, pady=1)
+#     output_frame.pack(padx=20, pady=1)
+#     draw_board(current_board)
+#     start_timer()
+#     command_frame.pack(ipadx=28, ipady=10)
+#
+#     update_turn_display()
 
 
 def start_game():
     global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit, is_running
+    global current_countdown, current_player
 
     # Open text files to store move history and time history
     open_text_files()
 
-    try:
-        max_moves = int(max_moves_entry.get())
-    except ValueError:
-        messagebox.showerror("Invalid Input", "Please enter a valid number for max moves.")
+    time_player1_raw = player1_time_entry.get().strip()
+    time_player2_raw = player2_time_entry.get().strip()
+    max_moves_raw = max_moves_entry.get().strip()
+
+    # Validate all fields are non-empty
+    if not time_player1_raw or not time_player2_raw or not max_moves_raw:
+        messagebox.showerror("Missing Input", "All fields are required and must be positive integers.")
         return
+
+    # Validate all fields are digits (no 'i' or text allowed)
+    if not time_player1_raw.isdigit() or not time_player2_raw.isdigit() or not max_moves_raw.isdigit():
+        messagebox.showerror("Invalid Input", "All fields must be valid positive integers.")
+        return
+
+    # Convert to integers
+    time_player1 = int(time_player1_raw)
+    time_player2 = int(time_player2_raw)
+    max_moves = int(max_moves_raw)
 
     # Ensure game_mode_box exists before using it
     if 'game_mode_box' not in globals():
@@ -529,25 +659,19 @@ def start_game():
         messagebox.showerror("Invalid Input", "Please select a valid game mode.")
         return
 
-    # Extract time limits
-    time_player1 = player1_time_entry.get() if player1_time_entry else "i"
-    time_player2 = player2_time_entry.get() if player2_time_entry else "i"
+    # Store time limits for each player
+    player_time_limits["Black"] = time_player2
+    player_time_limits["White"] = time_player1
 
-    # Convert time to int or set to infinity
-    time_player1 = int(time_player1) if time_player1.isdigit() else float("inf")
-    time_player2 = int(time_player2) if time_player2.isdigit() else float("inf")
-
-    # Now use these values in your game logic
-
+    # Game state initialization
     total_pause_duration = 0
     is_paused = False
     move_start_time = time.time()
     game_start_time = time.time()
-
     pause_button.config(state=tk.NORMAL, text="Pause Game")
     is_running = True
-    update_total_game_time()
 
+    # UI setup
     start_frame.pack_forget()
     top_frame.pack(ipady=5, pady=3)
     status_frame.pack(pady=5, ipadx=254)
@@ -557,10 +681,16 @@ def start_game():
     bottom_frame.pack(ipadx=46, ipady=5, pady=1)
     output_frame.pack(padx=20, pady=1)
     draw_board(current_board)
-    start_timer()
     command_frame.pack(ipadx=28, ipady=10)
 
     update_turn_display()
+
+    # Initialize countdown timer for current player
+    current_countdown = player_time_limits[current_player]
+    countdown_label.config(text=f"Time Left: {int(current_countdown)}s")
+
+    start_timer()
+
 
 
 def exit_game():
@@ -643,7 +773,7 @@ def revert_info():
     if move_start_time is not None:
         total_game_time = move_start_time - game_start_time - total_pause_duration
         game_start_time += time.time() - move_start_time
-        timer_label.config(text=f"Time: {int(total_game_time)}s")
+        # timer_label.config(text=f"Time: {int(total_game_time)}s")
         move_start_time = time.time()
 
 
@@ -743,36 +873,89 @@ def execute_random_move():
     update_move()
 
 
+# def execute_ai_move():
+#     global current_board, white_score, black_score, first_move
+#
+#     board_list = convert_board_format(current_board)
+#     current_player_color = "black" if current_player == "Black" else "white"
+#
+#     from AI import find_best_move
+#     from next_move_generator_cy import generate_all_next_moves
+#
+#     ai_time_limit = 3
+#
+#     next_move_label.config(text="AI is thinking...")
+#     root.update()
+#
+#     new_board_list, move_str, _, total_time = find_best_move(
+#         board_list,
+#         current_player_color,
+#         depth=5,
+#         time_limit=ai_time_limit,
+#         from_move_generator=generate_all_next_moves
+#     )
+#
+#     if new_board_list is None:
+#         messagebox.showinfo("AI Error", "AI could not find a valid move.")
+#         return
+#
+#     new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
+#
+#     old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
+#     new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+#     marbles_pushed_off = old_marbles - new_marbles
+#
+#     display_ai_move_log(f"AI: {move_str}")
+#     next_move_label.config(text="Type your move")
+#
+#     if update_score_and_check_game_end(marbles_pushed_off, f"AI: {move_str}"):
+#         return
+#
+#     current_board = new_board_dict
+#     draw_board(current_board)
+#     update_move()
+
 def execute_ai_move():
-    global current_board, white_score, black_score, first_move
-
-    board_list = convert_board_format(current_board)
-    current_player_color = "black" if current_player == "Black" else "white"
-
-    from AI import find_best_move
-    from next_move_generator_cy import generate_all_next_moves
-
-    ai_time_limit = 3
-
+    # Disable the move entry temporarily to avoid interference
+    move_entry.config(state=tk.DISABLED)
     next_move_label.config(text="AI is thinking...")
     root.update()
 
-    new_board_list, move_str, _, total_time = find_best_move(
-        board_list,
-        current_player_color,
-        depth=5,
-        time_limit=ai_time_limit,
-        from_move_generator=generate_all_next_moves
-    )
+    def run_ai():
+        global current_board, white_score, black_score
 
-    if new_board_list is None:
-        messagebox.showinfo("AI Error", "AI could not find a valid move.")
-        return
+        board_list = convert_board_format(current_board)
+        current_player_color = "black" if current_player == "Black" else "white"
+
+        from AI import find_best_move
+        from next_move_generator_cy import generate_all_next_moves
+
+        ai_time_limit = 3
+        new_board_list, move_str, _, total_time = find_best_move(
+            board_list,
+            current_player_color,
+            depth=5,
+            time_limit=ai_time_limit,
+            from_move_generator=generate_all_next_moves
+        )
+
+        if new_board_list is None:
+            messagebox.showinfo("AI Error", "AI could not find a valid move.")
+            return
+
+        # Switch back to main thread for GUI update
+        root.after(0, lambda: finish_ai_move(new_board_list, move_str))
+
+    threading.Thread(target=run_ai).start()
+
+def finish_ai_move(new_board_list, move_str):
+    global current_board
 
     new_board_dict = convert_to_dictionary(new_board_list, NO_MARBLE, BLACK_MARBLE, WHITE_MARBLE)
 
-    old_marbles = len([m for m in board_list[0]]) + len([m for m in board_list[1]])
-    new_marbles = len([m for m in new_board_list[0]]) + len([m for m in new_board_list[1]])
+    # Handle score & move count
+    old_marbles = len(new_board_list[0]) + len(new_board_list[1])
+    new_marbles = len([m for m in current_board.values() if m != NO_MARBLE])
     marbles_pushed_off = old_marbles - new_marbles
 
     display_ai_move_log(f"AI: {move_str}")
@@ -784,6 +967,10 @@ def execute_ai_move():
     current_board = new_board_dict
     draw_board(current_board)
     update_move()
+
+    move_entry.config(state=tk.NORMAL)
+
+    move_entry.delete(0, tk.END)
 
 
 def execute_manual_move(move_text):
@@ -913,7 +1100,7 @@ if __name__ == '__main__':
     board_layout_label.pack(pady=10)
 
     # Creating board layout box
-    board_layout_box = ttk.Combobox(start_frame, state = "readonly", values = ["Standard", "German Daisy", "Belgin Daisy"])
+    board_layout_box = ttk.Combobox(start_frame, state = "readonly", values = ["Standard", "German Daisy", "Belgian Daisy"])
     board_layout_box.pack(pady=5)
     board_layout_box.set("Standard")
 
@@ -1041,13 +1228,13 @@ if __name__ == '__main__':
 
     # Adding label to show game mode
     status_frame = tk.Frame(root, bg=THEME["bg"])
-    timer_label = tk.Label(status_frame, text="Time: 0s", font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"])
+    countdown_label = tk.Label(status_frame, text="Time Left: 0s", font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"])
     white_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {white_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
     white_score_label.pack(side="left")
     black_score_label = tk.Label(status_frame, text=f"Black Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
     black_score_label.pack(side="right")
 
-    timer_label.pack(padx=10)
+    countdown_label.pack(padx=10)
 
     bottom_frame = tk.Frame(root, bg=THEME["bg"])
     turn_label = tk.Label(
