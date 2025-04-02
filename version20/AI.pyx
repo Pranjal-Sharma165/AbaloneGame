@@ -27,49 +27,100 @@ ctypedef np.float64_t FLOAT64_t
 ctypedef unsigned long long uint64_t
 
 cdef struct EvaluationWeights:
-    double marble_diff
-    double centrality
-    double push_ability
-    double formation
-    double connectivity
+    double a
+    double b1
+    double b2
+    double b3
+    double b4
+    double b5
+    double c1
+    double c2
+    double d1
+    double d2
+    double d3
+    double d4
+    double d5
+    double e1
+    double e2
 
 cdef EvaluationWeights DEFAULT_WEIGHTS
 
 cdef void init_default_weights():
     global DEFAULT_WEIGHTS
 
-    DEFAULT_WEIGHTS.marble_diff = 1.00
-    DEFAULT_WEIGHTS.centrality = 0.311
-    DEFAULT_WEIGHTS.push_ability = 0.622
-    DEFAULT_WEIGHTS.formation = 0.617
-    DEFAULT_WEIGHTS.connectivity = 1.131
+    DEFAULT_WEIGHTS.a = 68.347
 
+    DEFAULT_WEIGHTS.b1 = 3.993
+    DEFAULT_WEIGHTS.b2 = 2.371
+    DEFAULT_WEIGHTS.b3 = 0.595
+    DEFAULT_WEIGHTS.b4 = 0.591
+    DEFAULT_WEIGHTS.b5 = -0.856
+
+    DEFAULT_WEIGHTS.c1 = 2.111
+    DEFAULT_WEIGHTS.c2 = 2.847
+
+    DEFAULT_WEIGHTS.d1 = 0.715
+    DEFAULT_WEIGHTS.d2 = 0.955
+    DEFAULT_WEIGHTS.d3 = 1.171
+    DEFAULT_WEIGHTS.d4 = 0.580
+    DEFAULT_WEIGHTS.d5 = 0.772
+
+    DEFAULT_WEIGHTS.e1 = 8.149
+    DEFAULT_WEIGHTS.e2 = 3.785
 
 def set_evaluation_weights(dict weights_dict):
-    
     global DEFAULT_WEIGHTS
 
-    if "marble_diff" in weights_dict:
-        DEFAULT_WEIGHTS.marble_diff = weights_dict["marble_diff"]
-    if "centrality" in weights_dict:
-        DEFAULT_WEIGHTS.centrality = weights_dict["centrality"]
-    if "push_ability" in weights_dict:
-        DEFAULT_WEIGHTS.push_ability = weights_dict["push_ability"]
-    if "formation" in weights_dict:
-        DEFAULT_WEIGHTS.formation = weights_dict["formation"]
-    if "connectivity" in weights_dict:
-        DEFAULT_WEIGHTS.connectivity = weights_dict["connectivity"]
+    if "a" in weights_dict:
+        DEFAULT_WEIGHTS.a = weights_dict["a"]
+    if "b1" in weights_dict:
+        DEFAULT_WEIGHTS.b1 = weights_dict["b1"]
+    if "b2" in weights_dict:
+        DEFAULT_WEIGHTS.b2 = weights_dict["b2"]
+    if "b3" in weights_dict:
+        DEFAULT_WEIGHTS.b3 = weights_dict["b3"]
+    if "b4" in weights_dict:
+        DEFAULT_WEIGHTS.b4 = weights_dict["b4"]
+    if "b5" in weights_dict:
+        DEFAULT_WEIGHTS.b5 = weights_dict["b5"]
+    if "c1" in weights_dict:
+        DEFAULT_WEIGHTS.c1 = weights_dict["c1"]
+    if "c2" in weights_dict:
+        DEFAULT_WEIGHTS.c2 = weights_dict["c2"]
+    if "d1" in weights_dict:
+        DEFAULT_WEIGHTS.d1 = weights_dict["d1"]
+    if "d2" in weights_dict:
+        DEFAULT_WEIGHTS.d2 = weights_dict["d2"]
+    if "d3" in weights_dict:
+        DEFAULT_WEIGHTS.d3 = weights_dict["d3"]
+    if "d4" in weights_dict:
+        DEFAULT_WEIGHTS.d4 = weights_dict["d4"]
+    if "d5" in weights_dict:
+        DEFAULT_WEIGHTS.d5 = weights_dict["d5"]
+    if "e1" in weights_dict:
+        DEFAULT_WEIGHTS.e1 = weights_dict["e1"]
+    if "e2" in weights_dict:
+        DEFAULT_WEIGHTS.e2 = weights_dict["e2"]
 
     return get_evaluation_weights()
 
 def get_evaluation_weights():
-    
     return {
-        "marble_diff": DEFAULT_WEIGHTS.marble_diff,
-        "centrality": DEFAULT_WEIGHTS.centrality,
-        "push_ability": DEFAULT_WEIGHTS.push_ability,
-        "formation": DEFAULT_WEIGHTS.formation,
-        "connectivity": DEFAULT_WEIGHTS.connectivity
+        "a": DEFAULT_WEIGHTS.a,
+        "b1": DEFAULT_WEIGHTS.b1,
+        "b2": DEFAULT_WEIGHTS.b2,
+        "b3": DEFAULT_WEIGHTS.b3,
+        "b4": DEFAULT_WEIGHTS.b4,
+        "b5": DEFAULT_WEIGHTS.b5,
+        "c1": DEFAULT_WEIGHTS.c1,
+        "c2": DEFAULT_WEIGHTS.c2,
+        "d1": DEFAULT_WEIGHTS.d1,
+        "d2": DEFAULT_WEIGHTS.d2,
+        "d3": DEFAULT_WEIGHTS.d3,
+        "d4": DEFAULT_WEIGHTS.d4,
+        "d5": DEFAULT_WEIGHTS.d5,
+        "e1": DEFAULT_WEIGHTS.e1,
+        "e2": DEFAULT_WEIGHTS.e2
     }
 
 cdef int MAX_MARBLES = 14
@@ -106,20 +157,20 @@ cdef struct CGroup:
 cdef int DIRECTIONS[6][2]
 
 cdef void init_directions():
-    DIRECTIONS[0][0] = 1; DIRECTIONS[0][1] = 0   # Upper right
-    DIRECTIONS[1][0] = 1; DIRECTIONS[1][1] = 1   # Upper right diagonal
-    DIRECTIONS[2][0] = 0; DIRECTIONS[2][1] = -1  # Left
-    DIRECTIONS[3][0] = 0; DIRECTIONS[3][1] = 1   # Right
-    DIRECTIONS[4][0] = -1; DIRECTIONS[4][1] = -1 # Lower left diagonal
-    DIRECTIONS[5][0] = -1; DIRECTIONS[5][1] = 0  # Lower left
+    DIRECTIONS[0][0] = 1; DIRECTIONS[0][1] = 0
+    DIRECTIONS[1][0] = 1; DIRECTIONS[1][1] = 1
+    DIRECTIONS[2][0] = 0; DIRECTIONS[2][1] = -1
+    DIRECTIONS[3][0] = 0; DIRECTIONS[3][1] = 1
+    DIRECTIONS[4][0] = -1; DIRECTIONS[4][1] = -1
+    DIRECTIONS[5][0] = -1; DIRECTIONS[5][1] = 0
 
 DIRECTIONS_NP = np.array([
-    [1, 0],   # Upper right
-    [1, 1],   # Upper right diagonal
-    [0, -1],  # Left
-    [0, 1],   # Right
-    [-1, -1], # Lower left diagonal
-    [-1, 0]   # Lower left
+    [1, 0],
+    [1, 1],
+    [0, -1],
+    [0, 1],
+    [-1, -1],
+    [-1, 0]
 ], dtype=np.int64)
 
 cdef INT64_t[:, :] DIRECTIONS_VIEW = DIRECTIONS_NP
@@ -228,11 +279,6 @@ cdef void init_valid_coords_lookup():
         VALID_COORDS_LOOKUP[row][col] = 1
 
 cdef double CENTRALITY_MAP_C[10][10]
-cdef double CENTER_SCORE = 6.7
-cdef double RING1_SCORE = 4.5
-cdef double RING2_SCORE = 2.8
-cdef double RING3_SCORE = 1.3
-cdef double RING4_SCORE = -1.3
 
 cdef void init_centrality_map_c():
     cdef int i, j
@@ -241,71 +287,71 @@ cdef void init_centrality_map_c():
         for j in range(10):
             CENTRALITY_MAP_C[i][j] = 1.0
 
-    CENTRALITY_MAP_C[5][5] = CENTER_SCORE
+    CENTRALITY_MAP_C[5][5] = DEFAULT_WEIGHTS.b1  # CENTER_SCORE
 
-    CENTRALITY_MAP_C[6][5] = RING1_SCORE
-    CENTRALITY_MAP_C[6][6] = RING1_SCORE
-    CENTRALITY_MAP_C[5][4] = RING1_SCORE
-    CENTRALITY_MAP_C[5][6] = RING1_SCORE
-    CENTRALITY_MAP_C[4][4] = RING1_SCORE
-    CENTRALITY_MAP_C[4][5] = RING1_SCORE
+    CENTRALITY_MAP_C[6][5] = DEFAULT_WEIGHTS.b2  # RING1_SCORE
+    CENTRALITY_MAP_C[6][6] = DEFAULT_WEIGHTS.b2
+    CENTRALITY_MAP_C[5][4] = DEFAULT_WEIGHTS.b2
+    CENTRALITY_MAP_C[5][6] = DEFAULT_WEIGHTS.b2
+    CENTRALITY_MAP_C[4][4] = DEFAULT_WEIGHTS.b2
+    CENTRALITY_MAP_C[4][5] = DEFAULT_WEIGHTS.b2
 
-    CENTRALITY_MAP_C[7][5] = RING2_SCORE
-    CENTRALITY_MAP_C[7][6] = RING2_SCORE
-    CENTRALITY_MAP_C[7][7] = RING2_SCORE
-    CENTRALITY_MAP_C[6][4] = RING2_SCORE
-    CENTRALITY_MAP_C[6][7] = RING2_SCORE
-    CENTRALITY_MAP_C[5][3] = RING2_SCORE
-    CENTRALITY_MAP_C[5][7] = RING2_SCORE
-    CENTRALITY_MAP_C[4][3] = RING2_SCORE
-    CENTRALITY_MAP_C[4][6] = RING2_SCORE
-    CENTRALITY_MAP_C[3][3] = RING2_SCORE
-    CENTRALITY_MAP_C[3][4] = RING2_SCORE
-    CENTRALITY_MAP_C[3][5] = RING2_SCORE
+    CENTRALITY_MAP_C[7][5] = DEFAULT_WEIGHTS.b3  # RING2_SCORE
+    CENTRALITY_MAP_C[7][6] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[7][7] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[6][4] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[6][7] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[5][3] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[5][7] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[4][3] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[4][6] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[3][3] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[3][4] = DEFAULT_WEIGHTS.b3
+    CENTRALITY_MAP_C[3][5] = DEFAULT_WEIGHTS.b3
 
-    CENTRALITY_MAP_C[8][5] = RING3_SCORE
-    CENTRALITY_MAP_C[8][6] = RING3_SCORE
-    CENTRALITY_MAP_C[8][7] = RING3_SCORE
-    CENTRALITY_MAP_C[8][8] = RING3_SCORE
-    CENTRALITY_MAP_C[7][4] = RING3_SCORE
-    CENTRALITY_MAP_C[7][8] = RING3_SCORE
-    CENTRALITY_MAP_C[6][3] = RING3_SCORE
-    CENTRALITY_MAP_C[6][8] = RING3_SCORE
-    CENTRALITY_MAP_C[5][2] = RING3_SCORE
-    CENTRALITY_MAP_C[5][8] = RING3_SCORE
-    CENTRALITY_MAP_C[4][2] = RING3_SCORE
-    CENTRALITY_MAP_C[4][7] = RING3_SCORE
-    CENTRALITY_MAP_C[3][2] = RING3_SCORE
-    CENTRALITY_MAP_C[3][6] = RING3_SCORE
-    CENTRALITY_MAP_C[2][2] = RING3_SCORE
-    CENTRALITY_MAP_C[2][3] = RING3_SCORE
-    CENTRALITY_MAP_C[2][4] = RING3_SCORE
-    CENTRALITY_MAP_C[2][5] = RING3_SCORE
+    CENTRALITY_MAP_C[8][5] = DEFAULT_WEIGHTS.b4  # RING3_SCORE
+    CENTRALITY_MAP_C[8][6] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[8][7] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[8][8] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[7][4] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[7][8] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[6][3] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[6][8] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[5][2] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[5][8] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[4][2] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[4][7] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[3][2] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[3][6] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[2][2] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[2][3] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[2][4] = DEFAULT_WEIGHTS.b4
+    CENTRALITY_MAP_C[2][5] = DEFAULT_WEIGHTS.b4
 
-    CENTRALITY_MAP_C[9][5] = RING4_SCORE
-    CENTRALITY_MAP_C[9][6] = RING4_SCORE
-    CENTRALITY_MAP_C[9][7] = RING4_SCORE
-    CENTRALITY_MAP_C[9][8] = RING4_SCORE
-    CENTRALITY_MAP_C[9][9] = RING4_SCORE
-    CENTRALITY_MAP_C[8][4] = RING4_SCORE
-    CENTRALITY_MAP_C[8][9] = RING4_SCORE
-    CENTRALITY_MAP_C[7][3] = RING4_SCORE
-    CENTRALITY_MAP_C[7][9] = RING4_SCORE
-    CENTRALITY_MAP_C[6][2] = RING4_SCORE
-    CENTRALITY_MAP_C[6][9] = RING4_SCORE
-    CENTRALITY_MAP_C[5][1] = RING4_SCORE
-    CENTRALITY_MAP_C[5][9] = RING4_SCORE
-    CENTRALITY_MAP_C[4][1] = RING4_SCORE
-    CENTRALITY_MAP_C[4][8] = RING4_SCORE
-    CENTRALITY_MAP_C[3][1] = RING4_SCORE
-    CENTRALITY_MAP_C[3][7] = RING4_SCORE
-    CENTRALITY_MAP_C[2][1] = RING4_SCORE
-    CENTRALITY_MAP_C[2][6] = RING4_SCORE
-    CENTRALITY_MAP_C[1][1] = RING4_SCORE
-    CENTRALITY_MAP_C[1][2] = RING4_SCORE
-    CENTRALITY_MAP_C[1][3] = RING4_SCORE
-    CENTRALITY_MAP_C[1][4] = RING4_SCORE
-    CENTRALITY_MAP_C[1][5] = RING4_SCORE
+    CENTRALITY_MAP_C[9][5] = DEFAULT_WEIGHTS.b5  # RING4_SCORE
+    CENTRALITY_MAP_C[9][6] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[9][7] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[9][8] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[9][9] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[8][4] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[8][9] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[7][3] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[7][9] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[6][2] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[6][9] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[5][1] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[5][9] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[4][1] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[4][8] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[3][1] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[3][7] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[2][1] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[2][6] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[1][1] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[1][2] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[1][3] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[1][4] = DEFAULT_WEIGHTS.b5
+    CENTRALITY_MAP_C[1][5] = DEFAULT_WEIGHTS.b5
 
 CENTER_COORDS_NP = np.array([(5, 5)], dtype=np.int64)
 
@@ -333,78 +379,131 @@ RING4_COORDS_NP = np.array([
 
 CENTRALITY_MAP = {}
 for coord in CENTER_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = CENTER_SCORE
+    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b1
 for coord in RING1_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = RING1_SCORE
+    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b2
 for coord in RING2_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = RING2_SCORE
+    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b3
 for coord in RING3_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = RING3_SCORE
+    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b4
 for coord in RING4_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = RING4_SCORE
+    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b5
 
 cdef int OUTER_RING_COORDS[24][2]
 cdef int MIDDLE_RING_COORDS[18][2]
 cdef int INNER_RING_COORDS[12][2]
 
 cdef void init_ring_coords():
+    OUTER_RING_COORDS[0][0] = 9;
+    OUTER_RING_COORDS[0][1] = 5
+    OUTER_RING_COORDS[1][0] = 9;
+    OUTER_RING_COORDS[1][1] = 6
+    OUTER_RING_COORDS[2][0] = 9;
+    OUTER_RING_COORDS[2][1] = 7
+    OUTER_RING_COORDS[3][0] = 9;
+    OUTER_RING_COORDS[3][1] = 8
+    OUTER_RING_COORDS[4][0] = 9;
+    OUTER_RING_COORDS[4][1] = 9
+    OUTER_RING_COORDS[5][0] = 8;
+    OUTER_RING_COORDS[5][1] = 4
+    OUTER_RING_COORDS[6][0] = 8;
+    OUTER_RING_COORDS[6][1] = 9
+    OUTER_RING_COORDS[7][0] = 7;
+    OUTER_RING_COORDS[7][1] = 3
+    OUTER_RING_COORDS[8][0] = 7;
+    OUTER_RING_COORDS[8][1] = 9
+    OUTER_RING_COORDS[9][0] = 6;
+    OUTER_RING_COORDS[9][1] = 2
+    OUTER_RING_COORDS[10][0] = 6;
+    OUTER_RING_COORDS[10][1] = 9
+    OUTER_RING_COORDS[11][0] = 5;
+    OUTER_RING_COORDS[11][1] = 1
+    OUTER_RING_COORDS[12][0] = 5;
+    OUTER_RING_COORDS[12][1] = 9
+    OUTER_RING_COORDS[13][0] = 4;
+    OUTER_RING_COORDS[13][1] = 1
+    OUTER_RING_COORDS[14][0] = 4;
+    OUTER_RING_COORDS[14][1] = 8
+    OUTER_RING_COORDS[15][0] = 3;
+    OUTER_RING_COORDS[15][1] = 1
+    OUTER_RING_COORDS[16][0] = 3;
+    OUTER_RING_COORDS[16][1] = 7
+    OUTER_RING_COORDS[17][0] = 2;
+    OUTER_RING_COORDS[17][1] = 1
+    OUTER_RING_COORDS[18][0] = 2;
+    OUTER_RING_COORDS[18][1] = 6
+    OUTER_RING_COORDS[19][0] = 1;
+    OUTER_RING_COORDS[19][1] = 1
+    OUTER_RING_COORDS[20][0] = 1;
+    OUTER_RING_COORDS[20][1] = 2
+    OUTER_RING_COORDS[21][0] = 1;
+    OUTER_RING_COORDS[21][1] = 3
+    OUTER_RING_COORDS[22][0] = 1;
+    OUTER_RING_COORDS[22][1] = 4
+    OUTER_RING_COORDS[23][0] = 1;
+    OUTER_RING_COORDS[23][1] = 5
 
-    OUTER_RING_COORDS[0][0] = 9; OUTER_RING_COORDS[0][1] = 5
-    OUTER_RING_COORDS[1][0] = 9; OUTER_RING_COORDS[1][1] = 6
-    OUTER_RING_COORDS[2][0] = 9; OUTER_RING_COORDS[2][1] = 7
-    OUTER_RING_COORDS[3][0] = 9; OUTER_RING_COORDS[3][1] = 8
-    OUTER_RING_COORDS[4][0] = 9; OUTER_RING_COORDS[4][1] = 9
-    OUTER_RING_COORDS[5][0] = 8; OUTER_RING_COORDS[5][1] = 4
-    OUTER_RING_COORDS[6][0] = 8; OUTER_RING_COORDS[6][1] = 9
-    OUTER_RING_COORDS[7][0] = 7; OUTER_RING_COORDS[7][1] = 3
-    OUTER_RING_COORDS[8][0] = 7; OUTER_RING_COORDS[8][1] = 9
-    OUTER_RING_COORDS[9][0] = 6; OUTER_RING_COORDS[9][1] = 2
-    OUTER_RING_COORDS[10][0] = 6; OUTER_RING_COORDS[10][1] = 9
-    OUTER_RING_COORDS[11][0] = 5; OUTER_RING_COORDS[11][1] = 1
-    OUTER_RING_COORDS[12][0] = 5; OUTER_RING_COORDS[12][1] = 9
-    OUTER_RING_COORDS[13][0] = 4; OUTER_RING_COORDS[13][1] = 1
-    OUTER_RING_COORDS[14][0] = 4; OUTER_RING_COORDS[14][1] = 8
-    OUTER_RING_COORDS[15][0] = 3; OUTER_RING_COORDS[15][1] = 1
-    OUTER_RING_COORDS[16][0] = 3; OUTER_RING_COORDS[16][1] = 7
-    OUTER_RING_COORDS[17][0] = 2; OUTER_RING_COORDS[17][1] = 1
-    OUTER_RING_COORDS[18][0] = 2; OUTER_RING_COORDS[18][1] = 6
-    OUTER_RING_COORDS[19][0] = 1; OUTER_RING_COORDS[19][1] = 1
-    OUTER_RING_COORDS[20][0] = 1; OUTER_RING_COORDS[20][1] = 2
-    OUTER_RING_COORDS[21][0] = 1; OUTER_RING_COORDS[21][1] = 3
-    OUTER_RING_COORDS[22][0] = 1; OUTER_RING_COORDS[22][1] = 4
-    OUTER_RING_COORDS[23][0] = 1; OUTER_RING_COORDS[23][1] = 5
+    MIDDLE_RING_COORDS[0][0] = 8;
+    MIDDLE_RING_COORDS[0][1] = 5
+    MIDDLE_RING_COORDS[1][0] = 8;
+    MIDDLE_RING_COORDS[1][1] = 6
+    MIDDLE_RING_COORDS[2][0] = 8;
+    MIDDLE_RING_COORDS[2][1] = 7
+    MIDDLE_RING_COORDS[3][0] = 8;
+    MIDDLE_RING_COORDS[3][1] = 8
+    MIDDLE_RING_COORDS[4][0] = 7;
+    MIDDLE_RING_COORDS[4][1] = 4
+    MIDDLE_RING_COORDS[5][0] = 7;
+    MIDDLE_RING_COORDS[5][1] = 8
+    MIDDLE_RING_COORDS[6][0] = 6;
+    MIDDLE_RING_COORDS[6][1] = 3
+    MIDDLE_RING_COORDS[7][0] = 6;
+    MIDDLE_RING_COORDS[7][1] = 8
+    MIDDLE_RING_COORDS[8][0] = 5;
+    MIDDLE_RING_COORDS[8][1] = 2
+    MIDDLE_RING_COORDS[9][0] = 5;
+    MIDDLE_RING_COORDS[9][1] = 8
+    MIDDLE_RING_COORDS[10][0] = 4;
+    MIDDLE_RING_COORDS[10][1] = 2
+    MIDDLE_RING_COORDS[11][0] = 4;
+    MIDDLE_RING_COORDS[11][1] = 7
+    MIDDLE_RING_COORDS[12][0] = 3;
+    MIDDLE_RING_COORDS[12][1] = 2
+    MIDDLE_RING_COORDS[13][0] = 3;
+    MIDDLE_RING_COORDS[13][1] = 6
+    MIDDLE_RING_COORDS[14][0] = 2;
+    MIDDLE_RING_COORDS[14][1] = 2
+    MIDDLE_RING_COORDS[15][0] = 2;
+    MIDDLE_RING_COORDS[15][1] = 3
+    MIDDLE_RING_COORDS[16][0] = 2;
+    MIDDLE_RING_COORDS[16][1] = 4
+    MIDDLE_RING_COORDS[17][0] = 2;
+    MIDDLE_RING_COORDS[17][1] = 5
 
-    MIDDLE_RING_COORDS[0][0] = 8; MIDDLE_RING_COORDS[0][1] = 5
-    MIDDLE_RING_COORDS[1][0] = 8; MIDDLE_RING_COORDS[1][1] = 6
-    MIDDLE_RING_COORDS[2][0] = 8; MIDDLE_RING_COORDS[2][1] = 7
-    MIDDLE_RING_COORDS[3][0] = 8; MIDDLE_RING_COORDS[3][1] = 8
-    MIDDLE_RING_COORDS[4][0] = 7; MIDDLE_RING_COORDS[4][1] = 4
-    MIDDLE_RING_COORDS[5][0] = 7; MIDDLE_RING_COORDS[5][1] = 8
-    MIDDLE_RING_COORDS[6][0] = 6; MIDDLE_RING_COORDS[6][1] = 3
-    MIDDLE_RING_COORDS[7][0] = 6; MIDDLE_RING_COORDS[7][1] = 8
-    MIDDLE_RING_COORDS[8][0] = 5; MIDDLE_RING_COORDS[8][1] = 2
-    MIDDLE_RING_COORDS[9][0] = 5; MIDDLE_RING_COORDS[9][1] = 8
-    MIDDLE_RING_COORDS[10][0] = 4; MIDDLE_RING_COORDS[10][1] = 2
-    MIDDLE_RING_COORDS[11][0] = 4; MIDDLE_RING_COORDS[11][1] = 7
-    MIDDLE_RING_COORDS[12][0] = 3; MIDDLE_RING_COORDS[12][1] = 2
-    MIDDLE_RING_COORDS[13][0] = 3; MIDDLE_RING_COORDS[13][1] = 6
-    MIDDLE_RING_COORDS[14][0] = 2; MIDDLE_RING_COORDS[14][1] = 2
-    MIDDLE_RING_COORDS[15][0] = 2; MIDDLE_RING_COORDS[15][1] = 3
-    MIDDLE_RING_COORDS[16][0] = 2; MIDDLE_RING_COORDS[16][1] = 4
-    MIDDLE_RING_COORDS[17][0] = 2; MIDDLE_RING_COORDS[17][1] = 5
-
-    INNER_RING_COORDS[0][0] = 7; INNER_RING_COORDS[0][1] = 5
-    INNER_RING_COORDS[1][0] = 7; INNER_RING_COORDS[1][1] = 6
-    INNER_RING_COORDS[2][0] = 7; INNER_RING_COORDS[2][1] = 7
-    INNER_RING_COORDS[3][0] = 6; INNER_RING_COORDS[3][1] = 4
-    INNER_RING_COORDS[4][0] = 6; INNER_RING_COORDS[4][1] = 7
-    INNER_RING_COORDS[5][0] = 5; INNER_RING_COORDS[5][1] = 3
-    INNER_RING_COORDS[6][0] = 5; INNER_RING_COORDS[6][1] = 7
-    INNER_RING_COORDS[7][0] = 4; INNER_RING_COORDS[7][1] = 3
-    INNER_RING_COORDS[8][0] = 4; INNER_RING_COORDS[8][1] = 6
-    INNER_RING_COORDS[9][0] = 3; INNER_RING_COORDS[9][1] = 3
-    INNER_RING_COORDS[10][0] = 3; INNER_RING_COORDS[10][1] = 4
-    INNER_RING_COORDS[11][0] = 3; INNER_RING_COORDS[11][1] = 5
+    INNER_RING_COORDS[0][0] = 7;
+    INNER_RING_COORDS[0][1] = 5
+    INNER_RING_COORDS[1][0] = 7;
+    INNER_RING_COORDS[1][1] = 6
+    INNER_RING_COORDS[2][0] = 7;
+    INNER_RING_COORDS[2][1] = 7
+    INNER_RING_COORDS[3][0] = 6;
+    INNER_RING_COORDS[3][1] = 4
+    INNER_RING_COORDS[4][0] = 6;
+    INNER_RING_COORDS[4][1] = 7
+    INNER_RING_COORDS[5][0] = 5;
+    INNER_RING_COORDS[5][1] = 3
+    INNER_RING_COORDS[6][0] = 5;
+    INNER_RING_COORDS[6][1] = 7
+    INNER_RING_COORDS[7][0] = 4;
+    INNER_RING_COORDS[7][1] = 3
+    INNER_RING_COORDS[8][0] = 4;
+    INNER_RING_COORDS[8][1] = 6
+    INNER_RING_COORDS[9][0] = 3;
+    INNER_RING_COORDS[9][1] = 3
+    INNER_RING_COORDS[10][0] = 3;
+    INNER_RING_COORDS[10][1] = 4
+    INNER_RING_COORDS[11][0] = 3;
+    INNER_RING_COORDS[11][1] = 5
 
 NEIGHBOR_CACHE = {}
 for i in range(VALID_COORDS_NP.shape[0]):
@@ -437,14 +536,13 @@ cdef void init_coord_to_index_map_c():
 cdef uint64_t ZOBRIST_TABLE_C[2][61]
 
 cdef void init_zobrist_table_c():
-    cdef int i, j, seed = 42  # Use fixed seed for deterministic results
+    cdef int i, j, seed = 42
 
     srand(seed)
 
     for i in range(2):  # 0 for black, 1 for white
         for j in range(61):  # For each valid board position
             ZOBRIST_TABLE_C[i][j] = rand() << 32 | rand()
-
 
 np.random.seed(42)
 ZOBRIST_TABLE_NP = np.random.randint(
@@ -487,7 +585,7 @@ cdef bint tt_probe(uint64_t hash_key, int depth, double * score, int * flag, uin
         flag[0] = entry.flag
         best_move_hash[0] = entry.best_move_hash
 
-        return entry.depth >= depth  # Return True if entry has sufficient depth
+        return entry.depth >= depth
 
     return False
 
@@ -521,7 +619,6 @@ group_cache = OrderedDict()
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline void manage_cache_size(object cache, int max_size):
-    
     if len(cache) > max_size:
         remove_count = max_size // 5
         for _ in range(remove_count):
@@ -531,31 +628,26 @@ cdef inline void manage_cache_size(object cache, int max_size):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline bint is_valid_coord_c(int row, int col):
-    
     return 0 <= row < 10 and 0 <= col < 10 and VALID_COORDS_LOOKUP[row][col] == 1
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline bint is_valid_coord(tuple coord):
-    
     return coord in VALID_COORDS_SET
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline list get_neighbors(tuple coord):
-    
     return NEIGHBOR_CACHE.get(coord, [])
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline int coord_to_index(tuple coord):
-    
     return COORD_TO_INDEX_MAP.get(coord, -1)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline int coord_to_index_c(int row, int col):
-    
     if 0 <= row < 10 and 0 <= col < 10:
         return COORD_TO_INDEX_MAP_C[row][col]
     return -1
@@ -563,7 +655,6 @@ cdef inline int coord_to_index_c(int row, int col):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef void copy_marbles_to_c_array(list marbles_list, int * rows, int * cols, int * count):
-    
     count[0] = len(marbles_list)
     cdef int i
     for i in range(count[0]):
@@ -575,7 +666,6 @@ cdef void copy_marbles_to_c_array(list marbles_list, int * rows, int * cols, int
 cdef void create_board_lookup(int * friend_rows, int * friend_cols, int friend_count,
                               int * enemy_rows, int * enemy_cols, int enemy_count,
                               int * board_lookup):
-    
     cdef int i, idx
 
     for i in range(MAX_BOARD_SIZE * MAX_BOARD_SIZE):
@@ -594,7 +684,6 @@ cdef void create_board_lookup(int * friend_rows, int * friend_cols, int friend_c
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline bint is_player_marble(int row, int col, int * board_lookup):
-    
     cdef int idx = row * MAX_BOARD_SIZE + col
     if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE:
         return board_lookup[idx] == 1
@@ -603,7 +692,6 @@ cdef inline bint is_player_marble(int row, int col, int * board_lookup):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline bint is_enemy_marble(int row, int col, int * board_lookup):
-    
     cdef int idx = row * MAX_BOARD_SIZE + col
     if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE:
         return board_lookup[idx] == 2
@@ -612,7 +700,6 @@ cdef inline bint is_enemy_marble(int row, int col, int * board_lookup):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef bint is_in_outer_ring(int row, int col):
-    
     cdef int i
     for i in range(24):
         if OUTER_RING_COORDS[i][0] == row and OUTER_RING_COORDS[i][1] == col:
@@ -622,7 +709,6 @@ cdef bint is_in_outer_ring(int row, int col):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef bint is_in_middle_ring(int row, int col):
-    
     cdef int i
     for i in range(18):
         if MIDDLE_RING_COORDS[i][0] == row and MIDDLE_RING_COORDS[i][1] == col:
@@ -632,7 +718,6 @@ cdef bint is_in_middle_ring(int row, int col):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef bint is_in_inner_ring(int row, int col):
-    
     cdef int i
     for i in range(12):
         if INNER_RING_COORDS[i][0] == row and INNER_RING_COORDS[i][1] == col:
@@ -642,7 +727,6 @@ cdef bint is_in_inner_ring(int row, int col):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef void find_groups_c(int * rows, int * cols, int count, int * board_lookup, CGroup * groups, int * group_count):
-    
     cdef int i, j, k, idx
     cdef bint is_adjacent
     cdef int dr, dc, dr2, dc2
@@ -702,7 +786,7 @@ cdef void find_groups_c(int * rows, int * cols, int count, int * board_lookup, C
 cdef inline double evaluate_marble_difference(int friend_count, int enemy_count) nogil:
     cdef double score
 
-    score = 100 * (friend_count - enemy_count)
+    score = DEFAULT_WEIGHTS.a * (friend_count - enemy_count)
 
     if friend_count <= 8:
         score = -10000.0
@@ -716,7 +800,6 @@ cdef inline double evaluate_marble_difference(int friend_count, int enemy_count)
 @cython.wraparound(False)
 cdef inline double evaluate_centrality(int *friend_rows, int *friend_cols, int friend_count,
                                        int *enemy_rows, int *enemy_cols, int enemy_count) nogil:
-    
     cdef double friend_centrality = 0.0
     cdef double enemy_centrality = 0.0
     cdef double friend_weight = 1.0
@@ -757,7 +840,6 @@ cdef inline double evaluate_centrality(int *friend_rows, int *friend_cols, int f
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline bint is_in_middle_ring_direct(int row, int col) nogil:
-    
     return ((row == 8 and col == 5) or (row == 8 and col == 6) or
             (row == 8 and col == 7) or (row == 8 and col == 8) or
             (row == 7 and col == 4) or (row == 7 and col == 8) or
@@ -772,7 +854,6 @@ cdef inline bint is_in_middle_ring_direct(int row, int col) nogil:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline bint is_in_outer_ring_direct(int row, int col) nogil:
-    
     return ((row == 9 and col == 5) or (row == 9 and col == 6) or
             (row == 9 and col == 7) or (row == 9 and col == 8) or
             (row == 9 and col == 9) or (row == 8 and col == 4) or
@@ -799,10 +880,10 @@ cdef inline double evaluate_push_ability(int *board_lookup) nogil:
             if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE and board_lookup[idx] == 2:
 
                 if is_in_middle_ring_direct(row, col):
-                    push_score += 1.2
+                    push_score += DEFAULT_WEIGHTS.c1
 
                 elif is_in_outer_ring_direct(row, col):
-                    push_score += 2.5
+                    push_score += DEFAULT_WEIGHTS.c2
 
     return push_score
 
@@ -811,7 +892,6 @@ cdef inline double evaluate_push_ability(int *board_lookup) nogil:
 @cython.wraparound(False)
 cdef inline double evaluate_formation(int *friend_rows, int *friend_cols, int friend_count,
                                       int *board_lookup) nogil:
-    
     cdef double formation_score = 0.0
     cdef int i, dir_idx, connection_count
     cdef int neighbor_row, neighbor_col, idx
@@ -830,15 +910,15 @@ cdef inline double evaluate_formation(int *friend_rows, int *friend_cols, int fr
                     connection_count += 1
 
             if connection_count == 2:
-                formation_score += 1.0
+                formation_score += DEFAULT_WEIGHTS.d1
             elif connection_count == 3:
-                formation_score += 1.25
+                formation_score += DEFAULT_WEIGHTS.d2
             elif connection_count == 4:
-                formation_score += 1.55
+                formation_score += DEFAULT_WEIGHTS.d3
             elif connection_count == 5:
-                formation_score += 1.27
+                formation_score += DEFAULT_WEIGHTS.d4
             elif connection_count == 6:
-                formation_score += 1.3
+                formation_score += DEFAULT_WEIGHTS.d5
 
     return formation_score * 0.8
 
@@ -847,7 +927,6 @@ cdef inline double evaluate_formation(int *friend_rows, int *friend_cols, int fr
 @cython.wraparound(False)
 cdef inline double evaluate_connectivity(int *friend_rows, int *friend_cols, int friend_count,
                                          int *board_lookup) nogil:
-    
     cdef double connectivity_score = 0.0
     cdef int i, dir_idx, connection_count
     cdef int neighbor_row, neighbor_col, idx
@@ -866,10 +945,10 @@ cdef inline double evaluate_connectivity(int *friend_rows, int *friend_cols, int
                     connection_count += 1
 
             if connection_count == 0:
-                connectivity_score -= 7.5
+                connectivity_score -= DEFAULT_WEIGHTS.e1
 
             elif connection_count == 1:
-                connectivity_score -= 4.0
+                connectivity_score -= DEFAULT_WEIGHTS.e2
 
     return connectivity_score * 0.9
 
@@ -880,34 +959,22 @@ cdef double evaluate_board_with_features_c(int *friend_rows, int *friend_cols, i
                                            int *enemy_rows, int *enemy_cols, int enemy_count,
                                            int *board_lookup, CGroup *groups, int group_count,
                                            EvaluationWeights *weights) nogil:
-    
     cdef double scores[5]
     cdef int feature_idx
     cdef int num_features = 5
 
     for feature_idx in prange(num_features, nogil=True, schedule='static'):
         if feature_idx == 0:
-
             scores[0] = evaluate_marble_difference(friend_count, enemy_count)
         elif feature_idx == 1:
-
             scores[1] = evaluate_centrality(friend_rows, friend_cols, friend_count,
                                             enemy_rows, enemy_cols, enemy_count)
         elif feature_idx == 2:
-
             scores[2] = evaluate_push_ability(board_lookup)
         elif feature_idx == 3:
-
             scores[3] = evaluate_formation(friend_rows, friend_cols, friend_count, board_lookup)
         elif feature_idx == 4:
-
             scores[4] = evaluate_connectivity(friend_rows, friend_cols, friend_count, board_lookup)
-
-    scores[0] *= weights.marble_diff
-    scores[1] *= weights.centrality
-    scores[2] *= weights.push_ability
-    scores[3] *= weights.formation
-    scores[4] *= weights.connectivity
 
     return scores[0] + scores[1] + scores[2] + scores[3] + scores[4]
 
@@ -915,8 +982,6 @@ cdef double evaluate_board_with_features_c(int *friend_rows, int *friend_cols, i
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def evaluate_board_with_features(list board, str player):
-    
-
     cdef int friend_idx = 0 if player.lower() == "black" else 1
     cdef int enemy_idx = 1 if player.lower() == "black" else 0
 
@@ -974,9 +1039,7 @@ def evaluate_board_with_features(list board, str player):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def evaluate_board(list board, str player):
-    
     return evaluate_board_with_features(board, player)
-
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
