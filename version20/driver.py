@@ -711,6 +711,7 @@ def configure_button(button, bg_color, fg_color="white", active_bg=None, active_
 
 def undo_move():
     global used_board, current_board, is_paused, previous_board
+    global current_countdown, timer_job
 
     # Check if the game is paused
     if is_paused:
@@ -720,11 +721,21 @@ def undo_move():
     # Check if there is a previous board state saved
     if previous_board:
         current_board = previous_board
-        previous_board = None # Prevent player from undo twice
+        previous_board = None  # Prevent player from undo twice
         draw_board(current_board)
         revert_info()
+
+        if timer_job:
+            root.after_cancel(timer_job)
+            timer_job = None
+
+        current_countdown = player_time_limits[current_player]
+        countdown_label.config(text=f"Time Left: {int(current_countdown)}s")
+        start_timer()
+
     else:
         messagebox.showinfo("Undo", "You can only undo a move once.")
+
 
 def revert_info():
     """
