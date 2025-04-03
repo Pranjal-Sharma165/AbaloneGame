@@ -763,17 +763,22 @@ def revert_info():
     # Decrements previous players move count
     move_counts[current_player] -= 1
 
+    displayed_moves = {
+        "Player 1": move_counts["Black"],
+        "Player 2": move_counts["White"]
+    }
+
     # Update the move counter for each player
-    move_counter_label.config(text=f"Moves: {move_counts}")
+    move_counter_label.config(text=f"Moves: {displayed_moves}")
 
     # Correctly display the current player
     update_turn_display()
 
     # Check to see if score changed, if yes, revert to previous score before undo move
     white_score = white_score if white_score == prev_white_score  else white_score - 1
-    white_score_label.config(text=f"White Marbles Lost: {white_score}")
+    white_score_label.config(text=f"Player 2 Marbles Lost: {white_score}")
     black_score = black_score if black_score == prev_black_score else black_score - 1
-    black_score_label.config(text=f"Black Marbles Lost: {black_score}")
+    black_score_label.config(text=f"Player 1 Marbles Lost: {black_score}")
 
     # Append (undone) tag to previous entry in move history log
     move_history_text.config(state="normal")  # Enable editing
@@ -805,16 +810,23 @@ def display_ai_move_log(move):
     """
     Updates the move history display with the latest move.
     """
-    # global file_move
+    global current_player
+
+    player_dict = {
+        "Player 1": "Black",
+        "Player 2": "White"
+    }
+
+    player_name = next(key for key, value in player_dict.items() if value == current_player)
 
     move_history_text.config(state="normal")  # Enable editing
-    move_history_text.insert(tk.END, f"{current_player}: {move}\n")  # Append the move
+    move_history_text.insert(tk.END, f"{player_name}: {move}\n")  # Append the move
     move_history_text.see(tk.END)  # Scroll to the bottom
     move_history_text.config(state="disabled")  # Disable editing
 
     # Write move entry into move history text file
     with open("move_history.txt", "a") as f:
-        f.write(f"{current_player}: {move}\n")
+        f.write(f"{player_name}: {move}\n")
 
 
 def display_turn_duration_log(player, duration):
@@ -823,14 +835,24 @@ def display_turn_duration_log(player, duration):
     """
     global file_time, calc_time
 
-    time_history_text.config(state="normal")  # Enable editing
-    time_history_text.insert(tk.END, f"{player}: {calc_time:.2f} sec\n")  # Append the move duration
-    time_history_text.see(tk.END)  # Scroll to the bottom
-    time_history_text.config(state="disabled")  # Disable editing
+    move_text = move_entry.get().strip()
 
-    # Write time entry into time history text file
-    with open("time_history.txt", "a") as f:
-        f.write(f"{player}: {calc_time:.2f} sec\n")
+    player_dict = {
+        "Player 1": "Black",
+        "Player 2": "White"
+    }
+
+    player_name = next(key for key, value in player_dict.items() if value == player)
+
+    if move_text == "1":
+        time_history_text.config(state="normal")  # Enable editing
+        time_history_text.insert(tk.END, f"{player_name}: {calc_time:.2f} sec\n")  # Append the move duration
+        time_history_text.see(tk.END)  # Scroll to the bottom
+        time_history_text.config(state="disabled")  # Disable editing
+
+        # Write time entry into time history text file
+        with open("time_history.txt", "a") as f:
+            f.write(f"{player_name}: {calc_time:.2f} sec\n")
 
 
 def process_move_command():
@@ -1251,10 +1273,10 @@ if __name__ == '__main__':
     # Adding label to show game mode
     status_frame = tk.Frame(root, bg=THEME["bg"])
     countdown_label = tk.Label(status_frame, text="Time Left: 0s", font=("Arial", 20), bg=THEME["bg"], fg=THEME["text"])
-    white_score_label = tk.Label(status_frame, text=f"White Marbles Lost: {white_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
-    white_score_label.pack(side="left")
-    black_score_label = tk.Label(status_frame, text=f"Black Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
-    black_score_label.pack(side="right")
+    white_score_label = tk.Label(status_frame, text=f"Player 2 Marbles Lost: {white_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    white_score_label.pack(side="right")
+    black_score_label = tk.Label(status_frame, text=f"Player 1 Marbles Lost: {black_score}", font=("Arial", 15, "bold"), bg=THEME["bg"], fg=THEME["text"])
+    black_score_label.pack(side="left")
 
     countdown_label.pack(padx=10)
 
