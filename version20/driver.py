@@ -845,8 +845,10 @@ def display_turn_duration_log(player, duration):
 
     player_name = next(key for key, value in player_dict.items() if value == player)
 
-    if move_text == "1":
+    if move_text == "1" or move_text == "0":
         time_history_text.config(state="normal")  # Enable editing
+        if calc_time is None:
+            calc_time = 0
         time_history_text.insert(tk.END, f"{player_name}: {calc_time:.2f} sec\n")  # Append the move duration
         time_history_text.see(tk.END)  # Scroll to the bottom
         time_history_text.config(state="disabled")  # Disable editing
@@ -879,21 +881,30 @@ def process_move_command():
     move_text = move_entry.get().strip()
     if selected_mode == "P1 (AI) VS P2 (Human)" and current_player == "Black":
         if move_text == "0":
+            print(f"Current Player: {current_player}")
+            print("execute random move")
             execute_random_move()
+            print(f"Current Player: {current_player}")
         elif move_text == "1":
             execute_ai_move()
         else:
             messagebox.showerror("Invalid command","Invalid command for AI. Must be 0 for random move, or 1 for calculated move")
     elif selected_mode == "P1 (Human) VS P2 (AI)" and current_player == "White":
         if move_text == "0":
+            print(f"Current Player: {current_player}")
+            print("execute random move")
             execute_random_move()
+            print(f"Current Player: {current_player}")
         elif move_text == "1":
             execute_ai_move()
         else:
             messagebox.showerror("Invalid command","Invalid command for AI. Must be 0 for random move, or 1 for calculated move")
     elif selected_mode == "P1 (AI) VS P2 (AI)":
         if move_text == "0":
+            print(f"Current Player: {current_player}")
+            print("execute random move")
             execute_random_move()
+            print(f"Current Player: {current_player}")
         elif move_text == "1":
             execute_ai_move()
         else:
