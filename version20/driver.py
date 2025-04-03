@@ -1146,7 +1146,7 @@ def execute_manual_move(move_text):
 
 def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
     global white_score, black_score
-    # print(f"Marbles pushed off: {marbles_pushed_off}") for debugging
+    print(f"Marbles pushed off: {marbles_pushed_off}") #for debugging
 
     if marbles_pushed_off == 0:
         return False
@@ -1162,7 +1162,7 @@ def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
             stop_game()
             return True
     else:
-        black_score -= marbles_pushed_off
+        black_score += marbles_pushed_off
         black_score_label.config(text=f"Player 1 Marbles Lost: {black_score}")
         if black_score >= 6:
             messagebox.showinfo("Game Over",
