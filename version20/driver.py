@@ -125,6 +125,7 @@ first_move = True # Sets first move for random move generation
 player_time_limits = {"Black": float("inf"), "White": float("inf")}  # Set default limits
 current_countdown = 0
 timer_job = None
+calc_time = None
 
 def open_text_files():
     """
@@ -810,24 +811,21 @@ def display_ai_move_log(move):
     with open("move_history.txt", "a") as f:
         f.write(f"{current_player}: {move}\n")
 
-    # # Write move entry into move history text file
-    # file_move.write(f"{current_player}: {move}\n")
-    # file_move.flush()
 
 def display_turn_duration_log(player, duration):
     """
     Updates the time history display with the time taken by the player for their move.
     """
-    global file_time
+    global file_time, calc_time
 
     time_history_text.config(state="normal")  # Enable editing
-    time_history_text.insert(tk.END, f"{player}: {duration:.2f} sec\n")  # Append the move duration
+    time_history_text.insert(tk.END, f"{player}: {calc_time:.2f} sec\n")  # Append the move duration
     time_history_text.see(tk.END)  # Scroll to the bottom
     time_history_text.config(state="disabled")  # Disable editing
 
     # Write time entry into time history text file
     with open("time_history.txt", "a") as f:
-        f.write(f"{player}: {duration:.2f} sec\n")
+        f.write(f"{player}: {calc_time:.2f} sec\n")
 
 
 def process_move_command():
@@ -940,7 +938,7 @@ def execute_ai_move():
     root.update()
 
     def run_ai():
-        global current_board, white_score, black_score
+        global current_board, white_score, black_score, calc_time
 
         board_list = convert_board_format(current_board)
         current_player_color = "black" if current_player == "Black" else "white"
@@ -956,6 +954,7 @@ def execute_ai_move():
             time_limit=ai_time_limit,
             from_move_generator=generate_all_next_moves
         )
+        calc_time = total_time
 
         if new_board_list is None:
             messagebox.showinfo("AI Error", "AI could not find a valid move.")
