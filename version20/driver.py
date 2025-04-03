@@ -854,7 +854,15 @@ def display_turn_duration_log(player, duration):
         # Write time entry into time history text file
         with open("time_history.txt", "a") as f:
             f.write(f"{player_name}: {calc_time:.2f} sec\n")
+    else:
+        time_history_text.config(state="normal")  # Enable editing
+        time_history_text.insert(tk.END, f"{player_name}: \n")  # Append the move duration
+        time_history_text.see(tk.END)  # Scroll to the bottom
+        time_history_text.config(state="disabled")  # Disable editing
 
+        # Write time entry into time history text file
+        with open("time_history.txt", "a") as f:
+            f.write(f"{player_name}: \n")
 
 def process_move_command():
     global white_score, black_score, previous_board, prev_white_score
