@@ -276,8 +276,11 @@ def update_turn_display():
         "White": {"bg": "white", "fg": "black"}
     }
     colors = player_colors.get(current_player, {"bg": "black", "fg": "white"})
+
+    player_label = "Player 1" if current_player == "Black" else "Player 2"
+
     turn_label.config(
-        text=f"Current Player: {current_player}",
+        text=f"Current Player: {player_label}",
         bg=colors["bg"],
         fg=colors["fg"],
         relief="solid",
@@ -520,8 +523,12 @@ def update_move():
     # Update move count for the current player
     move_counts[current_player] += 1
 
-    # Update the move counter label
-    move_counter_label.config(text=f"Moves: {move_counts}")
+    displayed_moves = {
+        "Player 1": move_counts["Black"],
+        "Player 2": move_counts["White"]
+    }
+    move_counter_label.config(text=f"Moves: {displayed_moves}")
+
     end_turn()
     move_entry.delete(0, tk.END)
 
