@@ -86,7 +86,8 @@ GERMAN_BOARD_INIT = {
 }  #this represents the board with the german daisy game starting positions
 
 used_board = STANDARD_BOARD_INIT
-current_mode = "Player VS Computer"
+MODES = ["P1 (AI) VS P2 (Human)", "P1 (Human) VS P2 (AI)", "P1 (Human) VS P2 (Human)", "P1 (AI) VS P2 (AI)"]
+selected_mode = "P1 (AI) VS P2 (Human)"
 
 # Set up the Tkinter root window for the game
 root = tk.Tk()
@@ -628,7 +629,7 @@ def end_turn():
 
 def start_game():
     global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit, is_running
-    global current_countdown, current_player
+    global current_countdown, current_player, current_mode
 
     # Open text files to store move history and time history
     open_text_files()
@@ -663,13 +664,13 @@ def start_game():
         messagebox.showerror("Error", f"Game Mode selection is missing! ({str(e)})")
         return
 
-    if selected_mode not in ["Computer VS Player", "Player VS Player", "Computer VS Computer"]:
+    if selected_mode not in MODES:
         messagebox.showerror("Invalid Input", "Please select a valid game mode.")
         return
 
     # Store time limits for each player
-    player_time_limits["Black"] = time_player2
-    player_time_limits["White"] = time_player1
+    player_time_limits["Black"] = time_player1
+    player_time_limits["White"] = time_player2
 
     # Game state initialization
     total_pause_duration = 0
@@ -868,11 +869,27 @@ def process_move_command():
         return
 
     move_text = move_entry.get().strip()
-
-    if move_text == "0":
-        execute_random_move()
-    elif move_text == "1":
-        execute_ai_move()
+    if selected_mode == "P1 (AI) VS P2 (Human)" and current_player == "Black":
+        if move_text == "0":
+            execute_random_move()
+        elif move_text == "1":
+            execute_ai_move()
+        else:
+            messagebox.showerror("Invalid command","Invalid command for AI. Must be 0 for random move, or 1 for calculated move")
+    elif selected_mode == "P1 (Human) VS P2 (AI)" and current_player == "White":
+        if move_text == "0":
+            execute_random_move()
+        elif move_text == "1":
+            execute_ai_move()
+        else:
+            messagebox.showerror("Invalid command","Invalid command for AI. Must be 0 for random move, or 1 for calculated move")
+    elif selected_mode == "P1 (AI) VS P2 (AI)":
+        if move_text == "0":
+            execute_random_move()
+        elif move_text == "1":
+            execute_ai_move()
+        else:
+            messagebox.showerror("Invalid command","Invalid command for AI. Must be 0 for random move, or 1 for calculated move")
     else:
         execute_manual_move(move_text)
 
@@ -1077,7 +1094,7 @@ def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
 
 
 def update_time_fields(event=None):
-    global player1_time_entry, player2_time_entry, time_player1_label, time_player2_label
+    global player1_time_entry, player2_time_entry, time_player1_label, time_player2_label, selected_mode
 
     selected_mode = game_mode_box.get()
 
@@ -1098,16 +1115,24 @@ def update_time_fields(event=None):
     # Insert time fields **right after the "Max Moves Per Player" field**.
     insert_index = start_frame.pack_slaves().index(max_moves_entry) + 1
 
-    if selected_mode == "Computer VS Player":
+    if selected_mode == "P1 (AI) VS P2 (Human)":
         time_player1_label.config(text="Time for Computer (seconds):")
         time_player1_label.pack(pady=5, after=max_moves_entry)
         player1_time_entry.pack(pady=5, after=time_player1_label)
 
-        time_player2_label.config(text="Time for Player 1 (seconds):")
+        time_player2_label.config(text="Time for Player 2 (seconds):")
+        time_player2_label.pack(pady=5, after=player1_time_entry)
+        player2_time_entry.pack(pady=5, after=time_player2_label)
+    elif selected_mode == "P1 (Human) VS P2 (AI)":
+        time_player1_label.config(text="Time for Player 1 (seconds):")
+        time_player1_label.pack(pady=5, after=max_moves_entry)
+        player1_time_entry.pack(pady=5, after=time_player1_label)
+
+        time_player2_label.config(text="Time for Computer (seconds):")
         time_player2_label.pack(pady=5, after=player1_time_entry)
         player2_time_entry.pack(pady=5, after=time_player2_label)
 
-    elif selected_mode == "Player VS Player":
+    elif selected_mode == "P1 (Human) VS P2 (Human)":
         time_player1_label.config(text="Time for Player 1 (seconds):")
         time_player1_label.pack(pady=5, after=max_moves_entry)
         player1_time_entry.pack(pady=5, after=time_player1_label)
@@ -1116,7 +1141,7 @@ def update_time_fields(event=None):
         time_player2_label.pack(pady=5, after=player1_time_entry)
         player2_time_entry.pack(pady=5, after=time_player2_label)
 
-    elif selected_mode == "Computer VS Computer":
+    elif selected_mode == "P1 (AI) VS P2 (AI)":
         time_player1_label.config(text="Time for Computer 1 (seconds):")
         time_player1_label.pack(pady=5, after=max_moves_entry)
         player1_time_entry.pack(pady=5, after=time_player1_label)
@@ -1154,10 +1179,11 @@ if __name__ == '__main__':
     game_mode_label = tk.Label(start_frame, text="Game Mode: ")
     game_mode_label.pack(pady=10)
 
-    game_mode_box = ttk.Combobox(start_frame, state="readonly",
-                                 values=["Computer VS Player", "Player VS Player", "Computer VS Computer"])
+    game_mode_box = ttk.Combobox(start_frame, state="readonly", width=24,
+                                 values=MODES)
     game_mode_box.pack(pady=5)
-    game_mode_box.set("Computer VS Player")  # Default value
+    game_mode_box.set("P1 (AI) VS P2 (Human)")  # Default value
+
 
     # Bind event to update fields when changing mode
     game_mode_box.bind("<<ComboboxSelected>>", update_time_fields)
