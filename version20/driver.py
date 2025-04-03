@@ -112,9 +112,12 @@ move_time_limit = float("inf")  # Default: No time limit
 total_pause_duration = 0  # Tracks the total time the game has been paused
 total_game_time = None
 game_start_time = None
-previous_board = None # Saved previous board state for undo
-prev_white_score = None # Saved white score for previous board state
-prev_black_score = None # Saved black score for previous board state
+board_history = []
+white_score_history = []
+black_score_history = []
+# previous_board = None # Saved previous board state for undo
+# prev_white_score = None # Saved white score for previous board state
+# prev_black_score = None # Saved black score for previous board state
 is_running = False
 message_timer = None
 player1_time_entry = None
@@ -127,6 +130,8 @@ player_time_limits = {"Black": float("inf"), "White": float("inf")}  # Set defau
 current_countdown = 0
 timer_job = None
 calc_time = None
+undo_counter = 0
+total_aggregate_time = 0
 
 def open_text_files():
     """
@@ -165,9 +170,10 @@ def add_undo_tag_to_text_file(filename):
         with open(filename, "r") as file:
             lines = file.readlines()
 
-        if len(lines) > 0:
+        if len(lines) > 0 and undo_counter <= 2:
             # Append (undone) tag to last line
-            lines[-1] = lines[-1].rstrip() + " " + "(undone)" + "\n"
+            # lines[-1] = lines[-1].rstrip() + " " + "(undone)" + "\n"
+            lines[-undo_counter] = lines[-undo_counter].rstrip() + " " + "(undone)" + "\n"
 
             with open(filename, "w") as file:
                 file.writelines(lines)
@@ -321,6 +327,7 @@ def change_theme():
 
 def reset_game_state():
     global current_player, move_counts, player_times, is_paused, pause_time, current_board, used_board, white_score, black_score, total_pause_duration, total_game_time, game_start_time, theme_mode, move_start_time, previous_board, prev_white_score, prev_black_score, message_timer
+    global board_history, white_score_history, black_score_history, undo_counter, total_aggregate_time
 
     current_player = "Black"
     move_counts = {"Black": 0, "White": 0}
@@ -334,9 +341,14 @@ def reset_game_state():
     total_pause_duration = 0  # Tracks the total time the game has been paused
     total_game_time = None
     game_start_time = None
-    previous_board = None  # Saved previous board state for undo
-    prev_white_score = None  # Saved white score for previous board state
-    prev_black_score = None  # Saved black score for previous board state
+    undo_counter = 0
+    board_history.clear()
+    white_score_history.clear()
+    black_score_history.clear()
+    total_aggregate_time = 0
+    # previous_board = None  # Saved previous board state for undo
+    # prev_white_score = None  # Saved white score for previous board state
+    # prev_black_score = None  # Saved black score for previous board state
 
     if message_timer is not None:
         start_frame.after_cancel(message_timer)
@@ -380,7 +392,7 @@ def stop_game():
     """
     Stops the game, resets the state, and hides game elements to return to the start screen.
     """
-    global is_running
+    global is_running, total_aggregate_time
     is_running = False
     reset_game_state()
     close_text_files()
@@ -397,6 +409,8 @@ def stop_game():
     time_history_frame.place_forget()  # Hide the time history frame
     # Show the landing page
     start_frame.pack(pady=100)
+    messagebox.showinfo("Total aggregate time",
+                        f"Total aggregate time: {total_aggregate_time}")
 
 
 def toggle_pause():
@@ -629,10 +643,13 @@ def end_turn():
 
 def start_game():
     global game_start_time, total_pause_duration, is_paused, move_start_time, max_moves, move_time_limit, is_running
-    global current_countdown, current_player, current_mode
+    global current_countdown, current_player, current_mode, undo_counter, total_aggregate_time
 
     # Open text files to store move history and time history
     open_text_files()
+
+    undo_counter = 0
+    total_aggregate_time = 0
 
     time_player1_raw = player1_time_entry.get().strip()
     time_player2_raw = player2_time_entry.get().strip()
@@ -723,7 +740,7 @@ def configure_button(button, bg_color, fg_color="white", active_bg=None, active_
 
 
 def undo_move():
-    global used_board, current_board, is_paused, previous_board
+    global used_board, current_board, is_paused, undo_counter
     global current_countdown, timer_job
 
     # Check if the game is paused
@@ -731,9 +748,19 @@ def undo_move():
         messagebox.showinfo("Game Paused", "The game is paused. Resume the game to undo moves.")
         return
 
+    if undo_counter > 2:
+        undo_counter = 0
+    else:
+        undo_counter += 1
+
+    print(undo_counter)
+
+    max_undo = 2
+
     # Check if there is a previous board state saved
-    if previous_board:
-        current_board = previous_board
+    if board_history and undo_counter <= max_undo:
+        current_board = board_history.pop()
+
         previous_board = None  # Prevent player from undo twice
         draw_board(current_board)
         revert_info()
@@ -747,8 +774,8 @@ def undo_move():
         start_timer()
 
     else:
-        messagebox.showinfo("Undo", "You can only undo a move once.")
-
+        messagebox.showinfo("Undo", "You cannot undo anymore.")
+        undo_counter = 0
 
 def revert_info():
     """
@@ -757,6 +784,7 @@ def revert_info():
     """
 
     global current_player, move_counts, white_score, black_score, prev_white_score, prev_black_score, file_move, file_time, move_start_time, total_game_time, game_start_time, total_pause_duration
+    global white_score_history, black_score_history, undo_counter, total_aggregate_time, calc_time
 
     # Reverts current player to player of previous turn
     current_player = "White" if current_player == "Black" else "Black"
@@ -776,14 +804,31 @@ def revert_info():
     update_turn_display()
 
     # Check to see if score changed, if yes, revert to previous score before undo move
-    white_score = white_score if white_score == prev_white_score  else white_score - 1
-    white_score_label.config(text=f"Player 2 Marbles Lost: {white_score}")
-    black_score = black_score if black_score == prev_black_score else black_score - 1
-    black_score_label.config(text=f"Player 1 Marbles Lost: {black_score}")
+    # white_score = white_score if white_score == prev_white_score  else white_score - 1
+    max_history = 2
+    if len(white_score_history) > max_history >= undo_counter:
+        white_score = white_score_history.pop()
+        white_score_label.config(text=f"Player 2 Marbles Lost: {white_score}")
+    # white_score = white_score_history.pop()
+    # white_score_label.config(text=f"Player 2 Marbles Lost: {white_score}")
+    # black_score = black_score if black_score == prev_black_score else black_score - 1
+    if len(black_score_history) > max_history >= undo_counter:
+        black_score = black_score_history.pop()
+        black_score_label.config(text=f"Player 1 Marbles Lost: {black_score}")
+    # black_score = black_score_history.pop()
+    # black_score_label.config(text=f"Player 1 Marbles Lost: {black_score}")
 
     # Append (undone) tag to previous entry in move history log
     move_history_text.config(state="normal")  # Enable editing
-    move_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
+
+    total_lines = int(move_history_text.index("end-1c").split(".")[0])
+
+    if undo_counter == 2 and total_lines > 1:
+        pos = move_history_text.search("\n", "end-2c", stopindex="1.0", backwards=True)
+        move_history_text.insert(pos, f"(undone)")
+    elif undo_counter == 1 and total_lines > 1:
+        move_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
+
     move_history_text.see(tk.END)  # Scroll to the bottom
     move_history_text.config(state="disabled")  # Disable editing
 
@@ -792,12 +837,22 @@ def revert_info():
 
     # Append (undone) tag to previous entry in time history log
     time_history_text.config(state="normal")  # Enable editing
-    time_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
+
+    total_lines = int(time_history_text.index("end-1c").split(".")[0])
+
+    if undo_counter == 2 and total_lines > 1:
+        pos = time_history_text.search("\n", "end-2c", stopindex="1.0", backwards=True)
+        time_history_text.insert(pos, f"(undone)")
+    elif undo_counter == 1 and total_lines > 1:
+        time_history_text.insert("end-2c", f"(undone)")  # Append (undone) tag to undone move
     time_history_text.see(tk.END)  # Scroll to the bottom
     time_history_text.config(state="disabled")  # Disable editing
 
     # Append (undone) tag to time history text file prev turn
     add_undo_tag_to_text_file("time_history.txt")
+
+    # Subtract undone AI calculation time from total aggregate time
+    total_aggregate_time -= calc_time
 
     # Reset turn duration and total game timer
     if move_start_time is not None:
@@ -834,7 +889,7 @@ def display_turn_duration_log(player, duration):
     """
     Updates the time history display with the time taken by the player for their move.
     """
-    global file_time, calc_time
+    global file_time, calc_time, total_aggregate_time
 
     move_text = move_entry.get().strip()
 
@@ -856,6 +911,9 @@ def display_turn_duration_log(player, duration):
         # Write time entry into time history text file
         with open("time_history.txt", "a") as f:
             f.write(f"{player_name}: {calc_time:.2f} sec\n")
+
+        total_aggregate_time += calc_time
+
     else:
         time_history_text.config(state="normal")  # Enable editing
         time_history_text.insert(tk.END, f"{player_name}: \n")  # Append the move duration
@@ -869,10 +927,14 @@ def display_turn_duration_log(player, duration):
 def process_move_command():
     global white_score, black_score, previous_board, prev_white_score
     global prev_black_score, is_paused, current_board, first_move
+    global board_history, white_score_history, black_score_history
 
-    previous_board = copy.deepcopy(current_board)
-    prev_white_score = copy.deepcopy(white_score)
-    prev_black_score = copy.deepcopy(black_score)
+    board_history.append(copy.deepcopy(current_board))
+    white_score_history.append(copy.deepcopy(white_score))
+    black_score_history.append(copy.deepcopy(black_score))
+    # previous_board = copy.deepcopy(current_board)
+    # prev_white_score = copy.deepcopy(white_score)
+    # prev_black_score = copy.deepcopy(black_score)
 
     if is_paused:
         messagebox.showinfo("Game Paused", "The game is paused. Resume the game to command.")
