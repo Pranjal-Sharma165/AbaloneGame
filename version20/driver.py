@@ -696,6 +696,11 @@ def start_game():
     # Initialize countdown timer for current player
     current_countdown = player_time_limits[current_player]
     countdown_label.config(text=f"Time Left: {int(current_countdown)}s")
+    displayed_moves = {
+        "Player 1": move_counts["Black"],
+        "Player 2": move_counts["White"]
+    }
+    move_counter_label.config(text=f"Moves: {displayed_moves}")
 
     start_timer()
 
