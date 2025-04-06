@@ -366,6 +366,8 @@ def reset_game_state():
         move_history_text.config(state="disabled")
 
     move_counter_label.config(text=f"Moves: {move_counts}")
+    white_score_label.config(text=f"Player 2 Marbles Lost: {white_score}")
+    black_score_label.config(text=f"Player 1 Marbles Lost: {black_score}")
     update_turn_display()
     canvas.delete("all")
     current_board = copy.deepcopy(used_board)
@@ -1152,7 +1154,7 @@ def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
 
 
     if current_player == "Black":
-        white_score -= marbles_pushed_off
+        white_score += marbles_pushed_off
         white_score_label.config(text=f"Player 2 Marbles Lost: {white_score}")
         if white_score >= 6:
             messagebox.showinfo("Game Over",
