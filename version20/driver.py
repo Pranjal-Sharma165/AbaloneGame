@@ -392,7 +392,7 @@ def stop_game():
     """
     Stops the game, resets the state, and hides game elements to return to the start screen.
     """
-    global is_running, total_aggregate_time
+    global is_running
     is_running = False
     reset_game_state()
     close_text_files()
@@ -409,8 +409,6 @@ def stop_game():
     time_history_frame.place_forget()  # Hide the time history frame
     # Show the landing page
     start_frame.pack(pady=100)
-    messagebox.showinfo("Total aggregate time",
-                        f"Total aggregate time: {total_aggregate_time}")
 
 
 def toggle_pause():
@@ -526,13 +524,14 @@ def time_up():
     end_turn()
 
 def update_move():
-    global move_counts, max_moves, current_player
+    global move_counts, max_moves, current_player, total_aggregate_time
     # Calculate total moves played by both players
     total_moves_played = move_counts['Black'] + move_counts['White']
 
     # Check if the next move will exceed the move limit
     if total_moves_played >= 2 * max_moves - 1:
-        messagebox.showinfo("Game Over", "Both players have reached their move limit! Game Over.")
+        messagebox.showinfo("Game Over", "Both players have reached their move limit! Game Over.\n"
+                                         f"Total aggregate time: {total_aggregate_time}")
         stop_game()
         return
 
