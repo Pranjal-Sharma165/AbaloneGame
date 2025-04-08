@@ -495,6 +495,22 @@ def start_timer():
     if not is_running or is_paused:
         return
 
+    move_text = move_entry.get().strip()
+    if selected_mode == "P1 (AI) VS P2 (Human)" and current_player == "Black":
+        if move_text != "0" and move_text != "1":
+            toggle_pause()
+            move_entry.config(state=tk.NORMAL)
+
+    elif selected_mode == "P1 (Human) VS P2 (AI)" and current_player == "White":
+        if move_text != "0" and move_text != "1":
+            toggle_pause()
+            move_entry.config(state=tk.NORMAL)
+
+    elif selected_mode == "P1 (AI) VS P2 (AI)":
+        if move_text != "0" and move_text != "1":
+            toggle_pause()
+            move_entry.config(state=tk.NORMAL)
+
     # Cancel previous timer if still running
     if timer_job:
         root.after_cancel(timer_job)
@@ -937,9 +953,9 @@ def process_move_command():
     # prev_white_score = copy.deepcopy(white_score)
     # prev_black_score = copy.deepcopy(black_score)
 
-    if is_paused:
-        messagebox.showinfo("Game Paused", "The game is paused. Resume the game to command.")
-        return
+    # if is_paused:
+    #     messagebox.showinfo("Game Paused", "The game is paused. Resume the game to command.")
+    #     return
 
     move_text = move_entry.get().strip()
     if selected_mode == "P1 (AI) VS P2 (Human)" and current_player == "Black":
@@ -1065,6 +1081,7 @@ def execute_ai_move():
 
     def run_ai():
         global current_board, white_score, black_score, calc_time
+        toggle_pause()
 
         board_list = convert_board_format(current_board)
         current_player_color = "black" if current_player == "Black" else "white"
