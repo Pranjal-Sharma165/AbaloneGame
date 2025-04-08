@@ -27,7 +27,7 @@ class AIWithCustomWeights:
             AIWithCustomWeights.ai_module = importlib.import_module(ai_module_path)
 
         self.ai = AIWithCustomWeights.ai_module
-        self.original_weights = self.ai.get_evaluation_weights()
+        self.original_weights = self.ai.WEIGHTS.copy()
         self.weights = weights if weights else self.original_weights
         self.name = name
 
@@ -45,10 +45,14 @@ class AIWithCustomWeights:
     def _apply_weights(self):
         if not self.weights:
             return
-        self.ai.set_evaluation_weights(self.weights)
+        for key, value in self.weights.items():
+            if key in self.ai.WEIGHTS:
+                self.ai.WEIGHTS[key] = value
 
     def _restore_weights(self):
-        self.ai.set_evaluation_weights(self.original_weights)
+        for key, value in self.original_weights.items():
+            if key in self.ai.WEIGHTS:
+                self.ai.WEIGHTS[key] = value
 
     def find_best_move(self, board, player, depth=5, time_limit=3.0):
         try:
@@ -56,6 +60,7 @@ class AIWithCustomWeights:
             return self.ai.find_best_move(board, player, depth, time_limit, MOVE_GENERATOR)
         finally:
             self._restore_weights()
+
 
 @lru_cache(maxsize=32)
 def load_weights_from_file(filename):
@@ -78,7 +83,6 @@ def save_weights_to_file(weights, filename):
 
 
 def modify_weights(weights, learning_rate):
-
     new_weights = {}
     for key, value in weights.items():
         adjustment = random.uniform(-learning_rate, learning_rate)
@@ -88,8 +92,6 @@ def modify_weights(weights, learning_rate):
 
 def conduct_battle(champion_ai, challenger_ai, num_games=1, time_limit=3.0, initial_board_type="standard",
                    max_depth=5, verbose=True, record_moves=False):
-    
-
     initial_board_dict = BOARD_TYPES.get(initial_board_type.lower(), STANDARD_BOARD_INIT)
 
     stats = {
@@ -139,7 +141,7 @@ def conduct_battle(champion_ai, challenger_ai, num_games=1, time_limit=3.0, init
                 print(f"Turn {moves_made + 1}/{max_moves} - {current_player} ({ai.name})...")
 
             start_time = time.time()
-            best_move, move_str, _, _ = ai.find_best_move(board, current_player, max_depth, time_limit)
+            best_move, move_str, _ = ai.find_best_move(board, current_player, max_depth, time_limit)
             end_time = time.time()
 
             if best_move is None:
@@ -254,7 +256,6 @@ def conduct_battle(champion_ai, challenger_ai, num_games=1, time_limit=3.0, init
 
 
 def save_match_results(stats, match_number, learning_rate):
-    
     results_dir = "battle_results"
     os.makedirs(results_dir, exist_ok=True)
 
@@ -287,11 +288,10 @@ def run_evolutionary_battles(initial_weights=None, learning_rate=0.05,
                              learning_rate_decay=0.95, games_per_match=1, time_limit=3.0,
                              board_type="standard", max_depth=5, run_indefinitely=True,
                              verbose=True, record_moves=False):
-
     if initial_weights is None:
         import importlib
         ai_module = importlib.import_module('AI')
-        initial_weights = ai_module.get_evaluation_weights()
+        initial_weights = ai_module.WEIGHTS.copy()
 
     if verbose:
         print(f"Starting evolutionary battles (press Ctrl+C to stop)")
@@ -302,14 +302,14 @@ def run_evolutionary_battles(initial_weights=None, learning_rate=0.05,
     results_dir = "evolution_results"
     os.makedirs(results_dir, exist_ok=True)
 
-    champion_weights = initial_weights  # 딥 카피 제거
+    champion_weights = initial_weights
     champion = AIWithCustomWeights(weights=champion_weights, name="Champion")
 
     match_history = []
     history_file = f"{results_dir}/evolution_history.json"
 
     current_learning_rate = learning_rate
-    min_learning_rate = 0.001  # 최소 학습률
+    min_learning_rate = 0.001
 
     challenger_weights = modify_weights(champion_weights, current_learning_rate)
     challenger = AIWithCustomWeights(weights=challenger_weights, name="Challenger")
@@ -376,7 +376,6 @@ def run_evolutionary_battles(initial_weights=None, learning_rate=0.05,
             match_num += 1
 
             if match_num % 5 == 0:
-
                 boost_factor = 1.5
                 current_learning_rate = min(learning_rate, current_learning_rate * boost_factor)
                 if verbose:
@@ -390,7 +389,6 @@ def run_evolutionary_battles(initial_weights=None, learning_rate=0.05,
     except KeyboardInterrupt:
         print("\n\nEvolution manually stopped by user.")
     finally:
-
         with open(history_file, 'w') as f:
             json.dump(match_history, f, indent=2)
         print(f"Final match history saved to: {history_file}")
@@ -409,7 +407,7 @@ def manual_weight_configuration():
 
     import importlib
     ai_module = importlib.import_module('AI')
-    default_weights = ai_module.get_evaluation_weights()
+    default_weights = ai_module.WEIGHTS.copy()
 
     print(f"Default weights: {default_weights}")
 
@@ -435,12 +433,12 @@ def main():
     learning_rate = 0.08
     learning_rate_decay = 0.95
     games_per_match = 1
-    time_limit = 5.0
+    time_limit = 7.0
     board_type = "belgian"
     max_depth = 3
     run_indefinitely = True
-    verbose = True  # 상세 출력 설정 옵션
-    record_moves = False  # 상세 이동 기록 설정 옵션
+    verbose = True
+    record_moves = False
 
     print("\nConfiguration options:")
     print("1. Use default settings")
