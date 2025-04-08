@@ -1089,8 +1089,8 @@ def execute_ai_move():
         from AI import find_best_move
         from next_move_generator_cy import generate_all_next_moves
 
-        ai_time_limit = 3
-        new_board_list, move_str, _, total_time = find_best_move(
+        ai_time_limit = 10
+        new_board_list, move_str, total_time = find_best_move(
             board_list,
             current_player_color,
             depth=5,

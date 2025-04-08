@@ -1,256 +1,50 @@
 # cython: language_level=3
 # cython: boundscheck=False
-# cython: wraparound=True
-# cython: nonecheck=False
 # cython: cdivision=True
 # cython: initializedcheck=False
-# cython: infer_types=True
-# distutils: extra_compile_args=-fopenmp
-# distutils: extra_link_args=-fopenmp
+# cython: wraparound=False
+# cython: nonecheck=False
+# cython: profile=False
 
-from cython.parallel import prange, parallel, threadid
-cimport openmp
 import time
-import cython
-from collections import OrderedDict
-from libc.math cimport sqrt, exp
-from libc.stdlib cimport malloc, free, rand, RAND_MAX, srand, calloc
-from libc.string cimport memcpy, memset
-from libc.time cimport time as c_time
-
 import numpy as np
 cimport numpy as np
-
+import cython
+import math
+from libc.stdlib cimport malloc, free, calloc
+from libc.string cimport memcpy, memset
+from libc.math cimport sqrt, exp
+from collections import OrderedDict
 
 ctypedef np.int64_t INT64_t
 ctypedef np.float64_t FLOAT64_t
-ctypedef unsigned long long uint64_t
+ctypedef np.uint8_t UINT8_t
 
-cdef struct EvaluationWeights:
-    double a
-    double b1
-    double b2
-    double b3
-    double b4
-    double b5
-    double c1
-    double c2
-    double d1
-    double d2
-    double d3
-    double d4
-    double d5
-    double e1
-    double e2
+DTYPE = np.int64
+FLOAT_DTYPE = np.float64
 
-cdef EvaluationWeights DEFAULT_WEIGHTS
-
-cdef void init_default_weights():
-    global DEFAULT_WEIGHTS
-
-    DEFAULT_WEIGHTS.a = 68.347
-
-    DEFAULT_WEIGHTS.b1 = 3.993
-    DEFAULT_WEIGHTS.b2 = 2.371
-    DEFAULT_WEIGHTS.b3 = 0.595
-    DEFAULT_WEIGHTS.b4 = 0.591
-    DEFAULT_WEIGHTS.b5 = -0.856
-
-    DEFAULT_WEIGHTS.c1 = 2.111
-    DEFAULT_WEIGHTS.c2 = 2.847
-
-    DEFAULT_WEIGHTS.d1 = 0.715
-    DEFAULT_WEIGHTS.d2 = 0.955
-    DEFAULT_WEIGHTS.d3 = 1.171
-    DEFAULT_WEIGHTS.d4 = 0.580
-    DEFAULT_WEIGHTS.d5 = 0.772
-
-    DEFAULT_WEIGHTS.e1 = 8.149
-    DEFAULT_WEIGHTS.e2 = 3.785
-
-def set_evaluation_weights(dict weights_dict):
-    global DEFAULT_WEIGHTS
-
-    if "a" in weights_dict:
-        DEFAULT_WEIGHTS.a = weights_dict["a"]
-    if "b1" in weights_dict:
-        DEFAULT_WEIGHTS.b1 = weights_dict["b1"]
-    if "b2" in weights_dict:
-        DEFAULT_WEIGHTS.b2 = weights_dict["b2"]
-    if "b3" in weights_dict:
-        DEFAULT_WEIGHTS.b3 = weights_dict["b3"]
-    if "b4" in weights_dict:
-        DEFAULT_WEIGHTS.b4 = weights_dict["b4"]
-    if "b5" in weights_dict:
-        DEFAULT_WEIGHTS.b5 = weights_dict["b5"]
-    if "c1" in weights_dict:
-        DEFAULT_WEIGHTS.c1 = weights_dict["c1"]
-    if "c2" in weights_dict:
-        DEFAULT_WEIGHTS.c2 = weights_dict["c2"]
-    if "d1" in weights_dict:
-        DEFAULT_WEIGHTS.d1 = weights_dict["d1"]
-    if "d2" in weights_dict:
-        DEFAULT_WEIGHTS.d2 = weights_dict["d2"]
-    if "d3" in weights_dict:
-        DEFAULT_WEIGHTS.d3 = weights_dict["d3"]
-    if "d4" in weights_dict:
-        DEFAULT_WEIGHTS.d4 = weights_dict["d4"]
-    if "d5" in weights_dict:
-        DEFAULT_WEIGHTS.d5 = weights_dict["d5"]
-    if "e1" in weights_dict:
-        DEFAULT_WEIGHTS.e1 = weights_dict["e1"]
-    if "e2" in weights_dict:
-        DEFAULT_WEIGHTS.e2 = weights_dict["e2"]
-
-    return get_evaluation_weights()
-
-def get_evaluation_weights():
-    return {
-        "a": DEFAULT_WEIGHTS.a,
-        "b1": DEFAULT_WEIGHTS.b1,
-        "b2": DEFAULT_WEIGHTS.b2,
-        "b3": DEFAULT_WEIGHTS.b3,
-        "b4": DEFAULT_WEIGHTS.b4,
-        "b5": DEFAULT_WEIGHTS.b5,
-        "c1": DEFAULT_WEIGHTS.c1,
-        "c2": DEFAULT_WEIGHTS.c2,
-        "d1": DEFAULT_WEIGHTS.d1,
-        "d2": DEFAULT_WEIGHTS.d2,
-        "d3": DEFAULT_WEIGHTS.d3,
-        "d4": DEFAULT_WEIGHTS.d4,
-        "d5": DEFAULT_WEIGHTS.d5,
-        "e1": DEFAULT_WEIGHTS.e1,
-        "e2": DEFAULT_WEIGHTS.e2
-    }
-
-cdef int MAX_MARBLES = 14
-cdef int MAX_GROUPS = 100
-cdef int MAX_BOARD_SIZE = 10
-cdef int VALID_COORDS_COUNT = 61
-cdef int DIRECTIONS_COUNT = 6
-
-cdef int TT_SIZE = 1 << 22
-cdef int TT_MASK = TT_SIZE - 1
-
-cdef int TT_EXACT = 0
-cdef int TT_LOWER = 1
-cdef int TT_UPPER = 2
-
-cdef struct TTEntry:
-    uint64_t hash_key
-    int depth
-    double score
-    int flag
-    uint64_t best_move_hash
-    int age
-
-cdef TTEntry* tt_table = NULL
-
-cdef struct CMarble:
-    int row
-    int col
-
-cdef struct CGroup:
-    CMarble marbles[3]
-    int size
-
-cdef int DIRECTIONS[6][2]
-
-cdef void init_directions():
-    DIRECTIONS[0][0] = 1; DIRECTIONS[0][1] = 0
-    DIRECTIONS[1][0] = 1; DIRECTIONS[1][1] = 1
-    DIRECTIONS[2][0] = 0; DIRECTIONS[2][1] = -1
-    DIRECTIONS[3][0] = 0; DIRECTIONS[3][1] = 1
-    DIRECTIONS[4][0] = -1; DIRECTIONS[4][1] = -1
-    DIRECTIONS[5][0] = -1; DIRECTIONS[5][1] = 0
-
-DIRECTIONS_NP = np.array([
+cdef int DIRECTIONS_C[6][2]
+DIRECTIONS_C= [
     [1, 0],
     [1, 1],
     [0, -1],
     [0, 1],
     [-1, -1],
     [-1, 0]
-], dtype=np.int64)
+]
 
-cdef INT64_t[:, :] DIRECTIONS_VIEW = DIRECTIONS_NP
+DIRECTIONS = np.array(DIRECTIONS_C, dtype=DTYPE)
+cdef INT64_t[:, :] DIRECTIONS_VIEW = DIRECTIONS
 
-cdef int VALID_COORDS[61][2]
+WEIGHTS = {
+    "marble_diff": 1.0,
+    "centrality": 0.18,
+    "push_ability": 0.35,
+    "formation": 0.027,
+    "connectivity": 1.35
+}
 
-cdef void init_valid_coords():
-    cdef int idx = 0
-
-    VALID_COORDS[idx][0] = 9; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 9; VALID_COORDS[idx][1] = 6; idx += 1
-    VALID_COORDS[idx][0] = 9; VALID_COORDS[idx][1] = 7; idx += 1
-    VALID_COORDS[idx][0] = 9; VALID_COORDS[idx][1] = 8; idx += 1
-    VALID_COORDS[idx][0] = 9; VALID_COORDS[idx][1] = 9; idx += 1
-
-    VALID_COORDS[idx][0] = 8; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 8; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 8; VALID_COORDS[idx][1] = 6; idx += 1
-    VALID_COORDS[idx][0] = 8; VALID_COORDS[idx][1] = 7; idx += 1
-    VALID_COORDS[idx][0] = 8; VALID_COORDS[idx][1] = 8; idx += 1
-    VALID_COORDS[idx][0] = 8; VALID_COORDS[idx][1] = 9; idx += 1
-
-    VALID_COORDS[idx][0] = 7; VALID_COORDS[idx][1] = 3; idx += 1
-    VALID_COORDS[idx][0] = 7; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 7; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 7; VALID_COORDS[idx][1] = 6; idx += 1
-    VALID_COORDS[idx][0] = 7; VALID_COORDS[idx][1] = 7; idx += 1
-    VALID_COORDS[idx][0] = 7; VALID_COORDS[idx][1] = 8; idx += 1
-    VALID_COORDS[idx][0] = 7; VALID_COORDS[idx][1] = 9; idx += 1
-
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 2; idx += 1
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 3; idx += 1
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 6; idx += 1
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 7; idx += 1
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 8; idx += 1
-    VALID_COORDS[idx][0] = 6; VALID_COORDS[idx][1] = 9; idx += 1
-
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 1; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 2; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 3; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 6; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 7; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 8; idx += 1
-    VALID_COORDS[idx][0] = 5; VALID_COORDS[idx][1] = 9; idx += 1
-
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 1; idx += 1
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 2; idx += 1
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 3; idx += 1
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 6; idx += 1
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 7; idx += 1
-    VALID_COORDS[idx][0] = 4; VALID_COORDS[idx][1] = 8; idx += 1
-
-    VALID_COORDS[idx][0] = 3; VALID_COORDS[idx][1] = 1; idx += 1
-    VALID_COORDS[idx][0] = 3; VALID_COORDS[idx][1] = 2; idx += 1
-    VALID_COORDS[idx][0] = 3; VALID_COORDS[idx][1] = 3; idx += 1
-    VALID_COORDS[idx][0] = 3; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 3; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 3; VALID_COORDS[idx][1] = 6; idx += 1
-    VALID_COORDS[idx][0] = 3; VALID_COORDS[idx][1] = 7; idx += 1
-
-    VALID_COORDS[idx][0] = 2; VALID_COORDS[idx][1] = 1; idx += 1
-    VALID_COORDS[idx][0] = 2; VALID_COORDS[idx][1] = 2; idx += 1
-    VALID_COORDS[idx][0] = 2; VALID_COORDS[idx][1] = 3; idx += 1
-    VALID_COORDS[idx][0] = 2; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 2; VALID_COORDS[idx][1] = 5; idx += 1
-    VALID_COORDS[idx][0] = 2; VALID_COORDS[idx][1] = 6; idx += 1
-
-    VALID_COORDS[idx][0] = 1; VALID_COORDS[idx][1] = 1; idx += 1
-    VALID_COORDS[idx][0] = 1; VALID_COORDS[idx][1] = 2; idx += 1
-    VALID_COORDS[idx][0] = 1; VALID_COORDS[idx][1] = 3; idx += 1
-    VALID_COORDS[idx][0] = 1; VALID_COORDS[idx][1] = 4; idx += 1
-    VALID_COORDS[idx][0] = 1; VALID_COORDS[idx][1] = 5; idx += 1
-
-VALID_COORDS_NP = np.array([
+VALID_COORDS = np.array([
     [9, 5], [9, 6], [9, 7], [9, 8], [9, 9],
     [8, 4], [8, 5], [8, 6], [8, 7], [8, 8], [8, 9],
     [7, 3], [7, 4], [7, 5], [7, 6], [7, 7], [7, 8], [7, 9],
@@ -260,365 +54,101 @@ VALID_COORDS_NP = np.array([
     [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7],
     [2, 1], [2, 2], [2, 3], [2, 4], [2, 5], [2, 6],
     [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-], dtype=np.int64)
+], dtype=DTYPE)
 
-VALID_COORDS_SET = {tuple(coord) for coord in VALID_COORDS_NP}
+cdef INT64_t[:, :] VALID_COORDS_VIEW = VALID_COORDS
 
-cdef int VALID_COORDS_LOOKUP[10][10]
+VALID_COORDS_LOOKUP = np.zeros((10, 10), dtype=np.uint8)
+for coord in VALID_COORDS:
+    VALID_COORDS_LOOKUP[coord[0], coord[1]] = 1
+cdef UINT8_t[:, :] VALID_COORDS_LOOKUP_VIEW = VALID_COORDS_LOOKUP
 
-cdef void init_valid_coords_lookup():
-    cdef int i, j, row, col
+VALID_COORDS_SET = {tuple(coord) for coord in VALID_COORDS}
 
-    for i in range(10):
-        for j in range(10):
-            VALID_COORDS_LOOKUP[i][j] = 0
+COORD_TO_INDEX_MAP = {}
+for i in range(VALID_COORDS.shape[0]):
+    COORD_TO_INDEX_MAP[tuple(VALID_COORDS[i])] = i
 
-    for i in range(VALID_COORDS_COUNT):
-        row = VALID_COORDS[i][0]
-        col = VALID_COORDS[i][1]
-        VALID_COORDS_LOOKUP[row][col] = 1
+CENTER_COORD = np.array([5, 5], dtype=DTYPE)
 
-cdef double CENTRALITY_MAP_C[10][10]
+CENTER_COORDS = np.array([(5, 5)], dtype=DTYPE)
 
-cdef void init_centrality_map_c():
-    cdef int i, j
-
-    for i in range(10):
-        for j in range(10):
-            CENTRALITY_MAP_C[i][j] = 1.0
-
-    CENTRALITY_MAP_C[5][5] = DEFAULT_WEIGHTS.b1  # CENTER_SCORE
-
-    CENTRALITY_MAP_C[6][5] = DEFAULT_WEIGHTS.b2  # RING1_SCORE
-    CENTRALITY_MAP_C[6][6] = DEFAULT_WEIGHTS.b2
-    CENTRALITY_MAP_C[5][4] = DEFAULT_WEIGHTS.b2
-    CENTRALITY_MAP_C[5][6] = DEFAULT_WEIGHTS.b2
-    CENTRALITY_MAP_C[4][4] = DEFAULT_WEIGHTS.b2
-    CENTRALITY_MAP_C[4][5] = DEFAULT_WEIGHTS.b2
-
-    CENTRALITY_MAP_C[7][5] = DEFAULT_WEIGHTS.b3  # RING2_SCORE
-    CENTRALITY_MAP_C[7][6] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[7][7] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[6][4] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[6][7] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[5][3] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[5][7] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[4][3] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[4][6] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[3][3] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[3][4] = DEFAULT_WEIGHTS.b3
-    CENTRALITY_MAP_C[3][5] = DEFAULT_WEIGHTS.b3
-
-    CENTRALITY_MAP_C[8][5] = DEFAULT_WEIGHTS.b4  # RING3_SCORE
-    CENTRALITY_MAP_C[8][6] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[8][7] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[8][8] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[7][4] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[7][8] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[6][3] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[6][8] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[5][2] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[5][8] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[4][2] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[4][7] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[3][2] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[3][6] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[2][2] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[2][3] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[2][4] = DEFAULT_WEIGHTS.b4
-    CENTRALITY_MAP_C[2][5] = DEFAULT_WEIGHTS.b4
-
-    CENTRALITY_MAP_C[9][5] = DEFAULT_WEIGHTS.b5  # RING4_SCORE
-    CENTRALITY_MAP_C[9][6] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[9][7] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[9][8] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[9][9] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[8][4] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[8][9] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[7][3] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[7][9] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[6][2] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[6][9] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[5][1] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[5][9] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[4][1] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[4][8] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[3][1] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[3][7] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[2][1] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[2][6] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[1][1] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[1][2] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[1][3] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[1][4] = DEFAULT_WEIGHTS.b5
-    CENTRALITY_MAP_C[1][5] = DEFAULT_WEIGHTS.b5
-
-CENTER_COORDS_NP = np.array([(5, 5)], dtype=np.int64)
-
-RING1_COORDS_NP = np.array([
+RING1_COORDS = np.array([
     (6, 5), (6, 6), (5, 4), (5, 6), (4, 4), (4, 5)
-], dtype=np.int64)
+], dtype=DTYPE)
 
-RING2_COORDS_NP = np.array([
+RING2_COORDS = np.array([
     (7, 5), (7, 6), (7, 7), (6, 4), (6, 7), (5, 3),
     (5, 7), (4, 3), (4, 6), (3, 3), (3, 4), (3, 5)
-], dtype=np.int64)
+], dtype=DTYPE)
 
-RING3_COORDS_NP = np.array([
+RING3_COORDS = np.array([
     (8, 5), (8, 6), (8, 7), (8, 8), (7, 4), (7, 8),
     (6, 3), (6, 8), (5, 2), (5, 8), (4, 2), (4, 7),
     (3, 2), (3, 6), (2, 2), (2, 3), (2, 4), (2, 5)
-], dtype=np.int64)
+], dtype=DTYPE)
 
-RING4_COORDS_NP = np.array([
+RING4_COORDS = np.array([
     (9, 5), (9, 6), (9, 7), (9, 8), (9, 9), (8, 4),
     (8, 9), (7, 3), (7, 9), (6, 2), (6, 9), (5, 1),
     (5, 9), (4, 1), (4, 8), (3, 1), (3, 7), (2, 1),
     (2, 6), (1, 1), (1, 2), (1, 3), (1, 4), (1, 5)
-], dtype=np.int64)
+], dtype=DTYPE)
+
+cdef double CENTER_SCORE = 7.0
+cdef double RING1_SCORE = 4.5
+cdef double RING2_SCORE = 2.8
+cdef double RING3_SCORE = 1.3
+cdef double RING4_SCORE = -1.5
 
 CENTRALITY_MAP = {}
-for coord in CENTER_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b1
-for coord in RING1_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b2
-for coord in RING2_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b3
-for coord in RING3_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b4
-for coord in RING4_COORDS_NP:
-    CENTRALITY_MAP[tuple(coord)] = DEFAULT_WEIGHTS.b5
+for coord in CENTER_COORDS:
+    CENTRALITY_MAP[tuple(coord)] = CENTER_SCORE
+for coord in RING1_COORDS:
+    CENTRALITY_MAP[tuple(coord)] = RING1_SCORE
+for coord in RING2_COORDS:
+    CENTRALITY_MAP[tuple(coord)] = RING2_SCORE
+for coord in RING3_COORDS:
+    CENTRALITY_MAP[tuple(coord)] = RING3_SCORE
+for coord in RING4_COORDS:
+    CENTRALITY_MAP[tuple(coord)] = RING4_SCORE
 
-cdef int OUTER_RING_COORDS[24][2]
-cdef int MIDDLE_RING_COORDS[18][2]
-cdef int INNER_RING_COORDS[12][2]
+cdef int BOARD_SIZE = 10
+FRIEND_MASK = np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=np.int8)
+cdef np.int8_t[:, :] FRIEND_MASK_VIEW = FRIEND_MASK
+ENEMY_MASK = np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=np.int8)
+cdef np.int8_t[:, :] ENEMY_MASK_VIEW = ENEMY_MASK
 
-cdef void init_ring_coords():
-    OUTER_RING_COORDS[0][0] = 9;
-    OUTER_RING_COORDS[0][1] = 5
-    OUTER_RING_COORDS[1][0] = 9;
-    OUTER_RING_COORDS[1][1] = 6
-    OUTER_RING_COORDS[2][0] = 9;
-    OUTER_RING_COORDS[2][1] = 7
-    OUTER_RING_COORDS[3][0] = 9;
-    OUTER_RING_COORDS[3][1] = 8
-    OUTER_RING_COORDS[4][0] = 9;
-    OUTER_RING_COORDS[4][1] = 9
-    OUTER_RING_COORDS[5][0] = 8;
-    OUTER_RING_COORDS[5][1] = 4
-    OUTER_RING_COORDS[6][0] = 8;
-    OUTER_RING_COORDS[6][1] = 9
-    OUTER_RING_COORDS[7][0] = 7;
-    OUTER_RING_COORDS[7][1] = 3
-    OUTER_RING_COORDS[8][0] = 7;
-    OUTER_RING_COORDS[8][1] = 9
-    OUTER_RING_COORDS[9][0] = 6;
-    OUTER_RING_COORDS[9][1] = 2
-    OUTER_RING_COORDS[10][0] = 6;
-    OUTER_RING_COORDS[10][1] = 9
-    OUTER_RING_COORDS[11][0] = 5;
-    OUTER_RING_COORDS[11][1] = 1
-    OUTER_RING_COORDS[12][0] = 5;
-    OUTER_RING_COORDS[12][1] = 9
-    OUTER_RING_COORDS[13][0] = 4;
-    OUTER_RING_COORDS[13][1] = 1
-    OUTER_RING_COORDS[14][0] = 4;
-    OUTER_RING_COORDS[14][1] = 8
-    OUTER_RING_COORDS[15][0] = 3;
-    OUTER_RING_COORDS[15][1] = 1
-    OUTER_RING_COORDS[16][0] = 3;
-    OUTER_RING_COORDS[16][1] = 7
-    OUTER_RING_COORDS[17][0] = 2;
-    OUTER_RING_COORDS[17][1] = 1
-    OUTER_RING_COORDS[18][0] = 2;
-    OUTER_RING_COORDS[18][1] = 6
-    OUTER_RING_COORDS[19][0] = 1;
-    OUTER_RING_COORDS[19][1] = 1
-    OUTER_RING_COORDS[20][0] = 1;
-    OUTER_RING_COORDS[20][1] = 2
-    OUTER_RING_COORDS[21][0] = 1;
-    OUTER_RING_COORDS[21][1] = 3
-    OUTER_RING_COORDS[22][0] = 1;
-    OUTER_RING_COORDS[22][1] = 4
-    OUTER_RING_COORDS[23][0] = 1;
-    OUTER_RING_COORDS[23][1] = 5
-
-    MIDDLE_RING_COORDS[0][0] = 8;
-    MIDDLE_RING_COORDS[0][1] = 5
-    MIDDLE_RING_COORDS[1][0] = 8;
-    MIDDLE_RING_COORDS[1][1] = 6
-    MIDDLE_RING_COORDS[2][0] = 8;
-    MIDDLE_RING_COORDS[2][1] = 7
-    MIDDLE_RING_COORDS[3][0] = 8;
-    MIDDLE_RING_COORDS[3][1] = 8
-    MIDDLE_RING_COORDS[4][0] = 7;
-    MIDDLE_RING_COORDS[4][1] = 4
-    MIDDLE_RING_COORDS[5][0] = 7;
-    MIDDLE_RING_COORDS[5][1] = 8
-    MIDDLE_RING_COORDS[6][0] = 6;
-    MIDDLE_RING_COORDS[6][1] = 3
-    MIDDLE_RING_COORDS[7][0] = 6;
-    MIDDLE_RING_COORDS[7][1] = 8
-    MIDDLE_RING_COORDS[8][0] = 5;
-    MIDDLE_RING_COORDS[8][1] = 2
-    MIDDLE_RING_COORDS[9][0] = 5;
-    MIDDLE_RING_COORDS[9][1] = 8
-    MIDDLE_RING_COORDS[10][0] = 4;
-    MIDDLE_RING_COORDS[10][1] = 2
-    MIDDLE_RING_COORDS[11][0] = 4;
-    MIDDLE_RING_COORDS[11][1] = 7
-    MIDDLE_RING_COORDS[12][0] = 3;
-    MIDDLE_RING_COORDS[12][1] = 2
-    MIDDLE_RING_COORDS[13][0] = 3;
-    MIDDLE_RING_COORDS[13][1] = 6
-    MIDDLE_RING_COORDS[14][0] = 2;
-    MIDDLE_RING_COORDS[14][1] = 2
-    MIDDLE_RING_COORDS[15][0] = 2;
-    MIDDLE_RING_COORDS[15][1] = 3
-    MIDDLE_RING_COORDS[16][0] = 2;
-    MIDDLE_RING_COORDS[16][1] = 4
-    MIDDLE_RING_COORDS[17][0] = 2;
-    MIDDLE_RING_COORDS[17][1] = 5
-
-    INNER_RING_COORDS[0][0] = 7;
-    INNER_RING_COORDS[0][1] = 5
-    INNER_RING_COORDS[1][0] = 7;
-    INNER_RING_COORDS[1][1] = 6
-    INNER_RING_COORDS[2][0] = 7;
-    INNER_RING_COORDS[2][1] = 7
-    INNER_RING_COORDS[3][0] = 6;
-    INNER_RING_COORDS[3][1] = 4
-    INNER_RING_COORDS[4][0] = 6;
-    INNER_RING_COORDS[4][1] = 7
-    INNER_RING_COORDS[5][0] = 5;
-    INNER_RING_COORDS[5][1] = 3
-    INNER_RING_COORDS[6][0] = 5;
-    INNER_RING_COORDS[6][1] = 7
-    INNER_RING_COORDS[7][0] = 4;
-    INNER_RING_COORDS[7][1] = 3
-    INNER_RING_COORDS[8][0] = 4;
-    INNER_RING_COORDS[8][1] = 6
-    INNER_RING_COORDS[9][0] = 3;
-    INNER_RING_COORDS[9][1] = 3
-    INNER_RING_COORDS[10][0] = 3;
-    INNER_RING_COORDS[10][1] = 4
-    INNER_RING_COORDS[11][0] = 3;
-    INNER_RING_COORDS[11][1] = 5
+cdef set outer_ring = {(int(coord[0]), int(coord[1])) for coord in RING4_COORDS}
+cdef set middle_ring = {(int(coord[0]), int(coord[1])) for coord in RING3_COORDS}
+cdef set inner_ring = {(int(coord[0]), int(coord[1])) for coord in RING2_COORDS}
 
 NEIGHBOR_CACHE = {}
-for i in range(VALID_COORDS_NP.shape[0]):
-    coord = tuple(VALID_COORDS_NP[i])
+for i in range(VALID_COORDS.shape[0]):
+    coord = tuple(VALID_COORDS[i])
     neighbors = []
-    for j in range(DIRECTIONS_NP.shape[0]):
-        neighbor = (VALID_COORDS_NP[i, 0] + DIRECTIONS_NP[j, 0], VALID_COORDS_NP[i, 1] + DIRECTIONS_NP[j, 1])
+    for j in range(DIRECTIONS.shape[0]):
+        neighbor = (VALID_COORDS[i, 0] + DIRECTIONS[j, 0], VALID_COORDS[i, 1] + DIRECTIONS[j, 1])
         if neighbor in VALID_COORDS_SET:
             neighbors.append(neighbor)
     NEIGHBOR_CACHE[coord] = neighbors
 
-COORD_TO_INDEX_MAP = {}
-for i in range(VALID_COORDS_NP.shape[0]):
-    COORD_TO_INDEX_MAP[tuple(VALID_COORDS_NP[i])] = i
-
-cdef int COORD_TO_INDEX_MAP_C[10][10]
-
-cdef void init_coord_to_index_map_c():
-    cdef int i, j, row, col
-
-    for i in range(10):
-        for j in range(10):
-            COORD_TO_INDEX_MAP_C[i][j] = -1
-
-    for i in range(VALID_COORDS_COUNT):
-        row = VALID_COORDS[i][0]
-        col = VALID_COORDS[i][1]
-        COORD_TO_INDEX_MAP_C[row][col] = i
-
-cdef uint64_t ZOBRIST_TABLE_C[2][61]
-
-cdef void init_zobrist_table_c():
-    cdef int i, j, seed = 42
-
-    srand(seed)
-
-    for i in range(2):  # 0 for black, 1 for white
-        for j in range(61):  # For each valid board position
-            ZOBRIST_TABLE_C[i][j] = rand() << 32 | rand()
-
-np.random.seed(42)
-ZOBRIST_TABLE_NP = np.random.randint(
-    0, 2 ** 64 - 1, size=(2, VALID_COORDS_NP.shape[0]), dtype=np.uint64
+ZOBRIST_TABLE = np.random.randint(
+    0, 2 ** 64 - 1, size=(2, VALID_COORDS.shape[0]), dtype=np.uint64
 )
 
-np.random.seed(None)
-
-cdef void init_tt_table():
-    global tt_table
-
-    if tt_table != NULL:
-        free(tt_table)
-
-    tt_table = <TTEntry *> calloc(TT_SIZE, sizeof(TTEntry))
-
-    if tt_table == NULL:
-        raise MemoryError("Transposition memory assignment failed")
-
-cdef void tt_store(uint64_t hash_key, int depth, double score, int flag, uint64_t best_move_hash, int age):
-    cdef int index = hash_key & TT_MASK
-    cdef TTEntry * entry = &tt_table[index]
-
-    if (entry.hash_key == 0 or
-            depth > entry.depth or
-            age > entry.age):
-        entry.hash_key = hash_key
-        entry.depth = depth
-        entry.score = score
-        entry.flag = flag
-        entry.best_move_hash = best_move_hash
-        entry.age = age
-
-cdef bint tt_probe(uint64_t hash_key, int depth, double * score, int * flag, uint64_t * best_move_hash):
-    cdef int index = hash_key & TT_MASK
-    cdef TTEntry * entry = &tt_table[index]
-
-    if entry.hash_key == hash_key:
-        score[0] = entry.score
-        flag[0] = entry.flag
-        best_move_hash[0] = entry.best_move_hash
-
-        return entry.depth >= depth
-
-    return False
-
-cdef int tt_age = 0
-
-cdef void clear_tt():
-    global tt_age
-
-    if tt_table != NULL:
-        memset(tt_table, 0, TT_SIZE * sizeof(TTEntry))
-
-    tt_age += 1
-
-cdef void initialize_all():
-    init_directions()
-    init_valid_coords()
-    init_valid_coords_lookup()
-    init_centrality_map_c()
-    init_ring_coords()
-    init_zobrist_table_c()
-    init_coord_to_index_map_c()
-    init_tt_table()
-    init_default_weights()
-
-initialize_all()
-
+MAX_TABLE_SIZE = 200000
+transposition_table = OrderedDict()
 history_table = {}
 killer_moves = {}
+
+MAX_CACHE_SIZE = 5000
 group_cache = OrderedDict()
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline void manage_cache_size(object cache, int max_size):
+    """Manage cache size by removing oldest entries if needed"""
     if len(cache) > max_size:
         remove_count = max_size // 5
         for _ in range(remove_count):
@@ -627,361 +157,382 @@ cdef inline void manage_cache_size(object cache, int max_size):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline bint is_valid_coord_c(int row, int col):
-    return 0 <= row < 10 and 0 <= col < 10 and VALID_COORDS_LOOKUP[row][col] == 1
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef inline bint is_valid_coord(tuple coord):
-    return coord in VALID_COORDS_SET
+    """Fast check if a coordinate is valid"""
+    cdef int row = coord[0]
+    cdef int col = coord[1]
+    if 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE:
+        return VALID_COORDS_LOOKUP_VIEW[row, col] == 1
+    return False
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline list get_neighbors(tuple coord):
+    """Get all valid neighboring coordinates"""
     return NEIGHBOR_CACHE.get(coord, [])
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline int coord_to_index(tuple coord):
+    """Convert coordinate to index for Zobrist hashing"""
     return COORD_TO_INDEX_MAP.get(coord, -1)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline int coord_to_index_c(int row, int col):
-    if 0 <= row < 10 and 0 <= col < 10:
-        return COORD_TO_INDEX_MAP_C[row][col]
-    return -1
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef void copy_marbles_to_c_array(list marbles_list, int * rows, int * cols, int * count):
-    count[0] = len(marbles_list)
+cdef inline bint is_in_array(tuple coord, list arr):
+    """Check if coordinate is in an array, optimized for different array sizes"""
     cdef int i
-    for i in range(count[0]):
-        rows[i] = marbles_list[i][0]
-        cols[i] = marbles_list[i][1]
+    cdef tuple item_tuple
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef void create_board_lookup(int * friend_rows, int * friend_cols, int friend_count,
-                              int * enemy_rows, int * enemy_cols, int enemy_count,
-                              int * board_lookup):
-    cdef int i, idx
+    if len(arr) > 10:
+        arr_set = {tuple(pos) for pos in arr}
+        return coord in arr_set
 
-    for i in range(MAX_BOARD_SIZE * MAX_BOARD_SIZE):
-        board_lookup[i] = 0
-
-    for i in range(friend_count):
-        idx = friend_rows[i] * MAX_BOARD_SIZE + friend_cols[i]
-        if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE:
-            board_lookup[idx] = 1
-
-    for i in range(enemy_count):
-        idx = enemy_rows[i] * MAX_BOARD_SIZE + enemy_cols[i]
-        if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE:
-            board_lookup[idx] = 2
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef inline bint is_player_marble(int row, int col, int * board_lookup):
-    cdef int idx = row * MAX_BOARD_SIZE + col
-    if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE:
-        return board_lookup[idx] == 1
-    return False
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef inline bint is_enemy_marble(int row, int col, int * board_lookup):
-    cdef int idx = row * MAX_BOARD_SIZE + col
-    if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE:
-        return board_lookup[idx] == 2
-    return False
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef bint is_in_outer_ring(int row, int col):
-    cdef int i
-    for i in range(24):
-        if OUTER_RING_COORDS[i][0] == row and OUTER_RING_COORDS[i][1] == col:
+    for i in range(len(arr)):
+        item_tuple = tuple(arr[i]) if not isinstance(arr[i], tuple) else arr[i]
+        if item_tuple[0] == coord[0] and item_tuple[1] == coord[1]:
             return True
     return False
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef bint is_in_middle_ring(int row, int col):
-    cdef int i
-    for i in range(18):
-        if MIDDLE_RING_COORDS[i][0] == row and MIDDLE_RING_COORDS[i][1] == col:
-            return True
-    return False
+cpdef np.uint64_t compute_zobrist_hash(list board):
+    """Compute Zobrist hash for board position"""
+    cdef np.uint64_t hash_value = 0
+    cdef int idx
+    cdef tuple marble_tuple
+
+    for marble in board[0]:
+        marble_tuple = tuple(marble)
+        idx = coord_to_index(marble_tuple)
+        if idx >= 0:
+            hash_value ^= ZOBRIST_TABLE[0, idx]
+
+    for marble in board[1]:
+        marble_tuple = tuple(marble)
+        idx = coord_to_index(marble_tuple)
+        if idx >= 0:
+            hash_value ^= ZOBRIST_TABLE[1, idx]
+
+    return hash_value
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef bint is_in_inner_ring(int row, int col):
-    cdef int i
-    for i in range(12):
-        if INNER_RING_COORDS[i][0] == row and INNER_RING_COORDS[i][1] == col:
-            return True
-    return False
+def find_groups_fast(marbles):
+    """
+    Find all possible groups of marbles (singles, pairs, triplets in line)
+    Optimized with caching for frequent marble configurations
+    """
+    if not marbles:
+        return []
+
+    cdef list marbles_tuple = [tuple(m) for m in marbles]
+    cdef tuple cache_key = tuple(sorted(marbles_tuple))
+
+    if cache_key in group_cache:
+        value = group_cache.pop(cache_key)
+        group_cache[cache_key] = value
+        return value
+
+    cdef list result = []
+    cdef int i, j, max_process, max_groups
+    cdef tuple marble1, neighbor, ext
+    cdef list group
+    cdef tuple diff
+
+    for i in range(len(marbles)):
+        result.append([marbles[i]])
+
+    if len(marbles) < 2:
+        group_cache[cache_key] = result
+        manage_cache_size(group_cache, MAX_CACHE_SIZE)
+        return result
+
+    cdef set marbles_set = set(marbles_tuple)
+
+    max_process = min(len(marbles), 50)
+
+    for i in range(max_process):
+        marble1 = marbles_tuple[i]
+        for neighbor in get_neighbors(marble1):
+            if neighbor in marbles_set:
+                result.append([list(marble1), list(neighbor)])
+
+    max_groups = min(len(result), 50)
+
+    for i in range(min(max_groups, len(result))):
+        group = result[i]
+        if len(group) == 2:
+            diff = (group[1][0] - group[0][0], group[1][1] - group[0][1])
+            ext = (group[1][0] + diff[0], group[1][1] + diff[1])
+            if ext in marbles_set:
+                result.append([group[0], group[1], list(ext)])
+
+    group_cache[cache_key] = result
+    manage_cache_size(group_cache, MAX_CACHE_SIZE)
+    return result
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void find_groups_c(int * rows, int * cols, int count, int * board_lookup, CGroup * groups, int * group_count):
-    cdef int i, j, k, idx
-    cdef bint is_adjacent
-    cdef int dr, dc, dr2, dc2
-    cdef int next_row, next_col
+cdef double evaluate_connectivity(list positions, bint friend_side):
+    """
+    Evaluate connectivity of marbles - how well they support each other
+    Uses pre-filled mask arrays for fast lookups
+    """
+    cdef double conn_score = 0.0
+    cdef int connection_count, row, col, nr, nc
+    cdef int dr, dc, i
 
-    group_count[0] = 0
+    if len(positions) < 3:
+        return 0.0
 
-    for i in range(count):
-        if group_count[0] < MAX_GROUPS:
-            groups[group_count[0]].marbles[0].row = rows[i]
-            groups[group_count[0]].marbles[0].col = cols[i]
-            groups[group_count[0]].size = 1
-            group_count[0] += 1
+    for position in positions:
+        row = position[0]
+        col = position[1]
+        connection_count = 0
 
-    for i in range(count):
-        for j in range(i + 1, count):
-            dr = rows[j] - rows[i]
-            dc = cols[j] - cols[i]
+        for i in range(DIRECTIONS_VIEW.shape[0]):
+            dr = <int> DIRECTIONS_VIEW[i, 0]
+            dc = <int> DIRECTIONS_VIEW[i, 1]
+            nr = row + dr
+            nc = col + dc
 
-            is_adjacent = False
-            for k in range(DIRECTIONS_COUNT):
-                if (dr == DIRECTIONS[k][0] and dc == DIRECTIONS[k][1]) or \
-                        (dr == -DIRECTIONS[k][0] and dc == -DIRECTIONS[k][1]):
-                    is_adjacent = True
+            if 0 <= nr < 10 and 0 <= nc < 10:
+
+                if friend_side:
+                    if FRIEND_MASK_VIEW[nr, nc] == 1:
+                        connection_count += 1
+                else:
+                    if ENEMY_MASK_VIEW[nr, nc] == 1:
+                        connection_count += 1
+
+        if connection_count == 0:
+            conn_score -= 7.0
+        elif connection_count == 1:
+            conn_score -= 2.3
+
+    return conn_score
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef double evaluate_hexagon_formation(list positions):
+    """
+    Evaluate formation of marbles - rewards hexagon and other strong formations
+    """
+    cdef double hexagon_score = 0.0
+    cdef int neighbor_count, total_neighbors = 0, positions_with_neighbors = 0
+    cdef int row, col, nr, nc, dr, dc, i, dir1_idx, dir2_idx
+    cdef double avg_connections, rectangle_score = 0.0
+    cdef int dr2
+    cdef int dc2
+    cdef int r3, c3
+    cdef int r4, c4
+
+    for (row, col) in [(pos[0], pos[1]) for pos in positions]:
+        neighbor_count = 0
+        for i in range(DIRECTIONS_VIEW.shape[0]):
+            dr = <int> DIRECTIONS_VIEW[i, 0];
+            dc = <int> DIRECTIONS_VIEW[i, 1]
+            nr = row + dr;
+            nc = col + dc
+            if 0 <= nr < 10 and 0 <= nc < 10 and FRIEND_MASK_VIEW[nr, nc] == 1:
+                neighbor_count += 1
+
+        total_neighbors += neighbor_count
+        if neighbor_count > 0:
+            positions_with_neighbors += 1
+
+        if neighbor_count == 6:
+            hexagon_score += 1.5
+        elif neighbor_count >= 4:
+            hexagon_score += neighbor_count * 0.2
+
+    avg_connections = 0.0
+    if positions_with_neighbors > 0:
+        avg_connections = total_neighbors / float(positions_with_neighbors)
+
+    if avg_connections > 4.0:
+        hexagon_score -= (avg_connections - 4.0) * 2.0
+
+    for (row, col) in [(p[0], p[1]) for p in positions]:
+        for dir1_idx in range(DIRECTIONS_VIEW.shape[0]):
+            dr = <int> DIRECTIONS_VIEW[dir1_idx, 0];
+            dc = <int> DIRECTIONS_VIEW[dir1_idx, 1]
+            nr = row + dr;
+            nc = col + dc
+
+            if 0 <= nr < 10 and 0 <= nc < 10 and FRIEND_MASK_VIEW[nr, nc] == 1:
+
+                dir2_idx = (dir1_idx + 2) % 6
+                dr2 = <int> DIRECTIONS_VIEW[dir2_idx, 0]
+                dc2 = <int> DIRECTIONS_VIEW[dir2_idx, 1]
+                r3 = row + dr2
+                c3 = col + dc2
+                r4 = nr + dr2
+                c4 = nc + dc2
+
+                if 0 <= r3 < 10 and 0 <= c3 < 10 and 0 <= r4 < 10 and 0 <= c4 < 10:
+                    if FRIEND_MASK_VIEW[r3, c3] == 1 and FRIEND_MASK_VIEW[r4, c4] == 1:
+                        rectangle_score += 1.1
+
+    rectangle_score = min(rectangle_score, 6.0)
+    return hexagon_score + rectangle_score
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef double evaluate_push_ability_strength(list groups):
+    """
+    Evaluate the push potential of marble groups
+    """
+    cdef double strength = 0.0
+    cdef int push_count
+    cdef int r1, c1, r2, c2, r3, c3, push_r, push_c, final_r, final_c, next_r, next_c
+    cdef list group, pos1, pos2, pos3
+
+    if len(groups) <= 1:
+        return 0.0
+
+    cdef list three_groups = []
+    for group in groups:
+        if len(group) == 3:
+            pos1, pos2, pos3 = group
+            r1, c1 = pos1[0], pos1[1]
+            r2, c2 = pos2[0], pos2[1]
+            r3, c3 = pos3[0], pos3[1]
+
+            if (r2 - r1) == (r3 - r2) and (c2 - c1) == (c3 - c2):
+                three_groups.append(group)
+                if len(three_groups) >= 15:
                     break
 
-            if is_adjacent and group_count[0] < MAX_GROUPS:
-                groups[group_count[0]].marbles[0].row = rows[i]
-                groups[group_count[0]].marbles[0].col = cols[i]
-                groups[group_count[0]].marbles[1].row = rows[j]
-                groups[group_count[0]].marbles[1].col = cols[j]
-                groups[group_count[0]].size = 2
-                group_count[0] += 1
+    for group in three_groups:
+        pos1, pos2, pos3 = group
+        r1, c1 = pos1[0], pos1[1]
+        r2, c2 = pos2[0], pos2[1]
+        r3, c3 = pos3[0], pos3[1]
 
-    cdef int max_twos = min(group_count[0], 50)  # Limit search for efficiency
-    for i in range(max_twos):
-        if groups[i].size == 2:
-            dr = groups[i].marbles[1].row - groups[i].marbles[0].row
-            dc = groups[i].marbles[1].col - groups[i].marbles[0].col
+        push_r = r3 + (r2 - r1)
+        push_c = c3 + (c2 - c1)
 
-            next_row = groups[i].marbles[1].row + dr
-            next_col = groups[i].marbles[1].col + dc
+        if 0 <= push_r < BOARD_SIZE and 0 <= push_c < BOARD_SIZE and ENEMY_MASK_VIEW[push_r, push_c] == 1:
+            push_count = 1
+            next_r = push_r + (r2 - r1)
+            next_c = push_c + (c2 - c1)
 
-            if is_player_marble(next_row, next_col, board_lookup) and group_count[0] < MAX_GROUPS:
-                groups[group_count[0]].marbles[0].row = groups[i].marbles[0].row
-                groups[group_count[0]].marbles[0].col = groups[i].marbles[0].col
-                groups[group_count[0]].marbles[1].row = groups[i].marbles[1].row
-                groups[group_count[0]].marbles[1].col = groups[i].marbles[1].col
-                groups[group_count[0]].marbles[2].row = next_row
-                groups[group_count[0]].marbles[2].col = next_col
-                groups[group_count[0]].size = 3
-                group_count[0] += 1
+            if 0 <= next_r < BOARD_SIZE and 0 <= next_c < BOARD_SIZE and ENEMY_MASK_VIEW[next_r, next_c] == 1:
+                push_count += 1
+
+            final_r = push_r + (r2 - r1) * push_count
+            final_c = push_c + (c2 - c1) * push_count
+
+            if not is_valid_coord((final_r, final_c)):
+                strength += 30.0 * push_count
+            elif FRIEND_MASK_VIEW[final_r, final_c] == 0 and ENEMY_MASK_VIEW[final_r, final_c] == 0:
+
+                for m in range(push_count):
+                    next_r = push_r + (r2 - r1) * m
+                    next_c = push_c + (c2 - c1) * m
+                    if (next_r, next_c) in outer_ring:
+                        strength += 10.0
+                    elif (next_r, next_c) in middle_ring:
+                        strength += 6.0
+                    elif (next_r, next_c) in inner_ring:
+                        strength += 3.0
+
+    cdef list two_groups = []
+    for group in groups:
+        if len(group) == 2:
+            two_groups.append(group)
+            if len(two_groups) >= 20:
+                break
+
+    for group in two_groups:
+        pos1, pos2 = group
+        r1, c1 = pos1[0], pos1[1]
+        r2, c2 = pos2[0], pos2[1]
+        push_r = r2 + (r2 - r1)
+        push_c = c2 + (c2 - c1)
+
+        if 0 <= push_r < BOARD_SIZE and 0 <= push_c < BOARD_SIZE and ENEMY_MASK_VIEW[push_r, push_c] == 1:
+            final_r = push_r + (r2 - r1)
+            final_c = push_c + (c2 - c1)
+
+            if not is_valid_coord((final_r, final_c)):
+                strength += 20.0
+            elif FRIEND_MASK_VIEW[final_r, final_c] == 0 and ENEMY_MASK_VIEW[final_r, final_c] == 0:
+
+                if (push_r, push_c) in outer_ring:
+                    strength += 10.0
+                elif (push_r, push_c) in middle_ring:
+                    strength += 6.0
+                elif (push_r, push_c) in inner_ring:
+                    strength += 3.0
+
+    return strength
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline double evaluate_marble_difference(int friend_count, int enemy_count) nogil:
-    cdef double score
-
-    score = DEFAULT_WEIGHTS.a * (friend_count - enemy_count)
-
-    if friend_count <= 8:
-        score = -10000.0
-    elif enemy_count <= 8:
-        score = 10000.0
-
-    return score
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef inline double evaluate_centrality(int *friend_rows, int *friend_cols, int friend_count,
-                                       int *enemy_rows, int *enemy_cols, int enemy_count) nogil:
+cdef double calculate_centrality(list friend_positions, list enemy_positions, set friend_set=None, set enemy_set=None):
+    """
+    Calculate centrality score for both players
+    """
     cdef double friend_centrality = 0.0
     cdef double enemy_centrality = 0.0
+    cdef tuple pos
+    cdef double score
+    cdef double scale_factor = 0.075
+
+    for pos in friend_positions:
+        score = CENTRALITY_MAP.get(pos, 1.0) * scale_factor
+        friend_centrality += score
+
+    for pos in enemy_positions:
+        score = CENTRALITY_MAP.get(pos, 1.0) * scale_factor
+        enemy_centrality += score
+
+    cdef int friend_marbles_left = len(friend_positions)
+    cdef int enemy_marbles_left = len(enemy_positions)
     cdef double friend_weight = 1.0
     cdef double enemy_weight = 1.0
-    cdef double scale_factor = 1.0
-    cdef double score
-    cdef int i, row, col
-
-    for i in range(friend_count):
-        row = friend_rows[i]
-        col = friend_cols[i]
-        if 0 <= row < 10 and 0 <= col < 10:
-            score = CENTRALITY_MAP_C[row][col] * scale_factor
-            friend_centrality += score
-
-    for i in range(enemy_count):
-        row = enemy_rows[i]
-        col = enemy_cols[i]
-        if 0 <= row < 10 and 0 <= col < 10:
-            score = CENTRALITY_MAP_C[row][col] * scale_factor
-            enemy_centrality += score
-
-    if friend_count < 14:
-        friend_weight = 1.0 - (14 - friend_count) * 0.03
-
-    if enemy_count < 14:
-        enemy_weight = 1.0 - (14 - enemy_count) * 0.03
-
-    if friend_count > 0:
-        friend_centrality = friend_centrality * (friend_count * friend_weight)
-
-    if enemy_count > 0:
-        enemy_centrality = enemy_centrality * (enemy_count * enemy_weight)
 
     return friend_centrality - enemy_centrality
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline bint is_in_middle_ring_direct(int row, int col) nogil:
-    return ((row == 8 and col == 5) or (row == 8 and col == 6) or
-            (row == 8 and col == 7) or (row == 8 and col == 8) or
-            (row == 7 and col == 4) or (row == 7 and col == 8) or
-            (row == 6 and col == 3) or (row == 6 and col == 8) or
-            (row == 5 and col == 2) or (row == 5 and col == 8) or
-            (row == 4 and col == 2) or (row == 4 and col == 7) or
-            (row == 3 and col == 2) or (row == 3 and col == 6) or
-            (row == 2 and col == 2) or (row == 2 and col == 3) or
-            (row == 2 and col == 4) or (row == 2 and col == 5))
+cdef double evaluate_marble_difference(int friend_count, int enemy_count):
+    """
+    Evaluate the difference in marble count between players
+    """
+    cdef double marble_diff_score = 0.0
+    cdef int friend_off, enemy_off
+    cdef double enemy_off_score, friend_off_score
+
+    enemy_off = 14 - enemy_count
+    enemy_off_score = 600.0 * enemy_off 
+
+    friend_off = 14 - friend_count
+    friend_off_score = -650.0 * friend_off
+
+
+    if friend_count <= 8:
+        return -10000.0
+    if enemy_count <= 8:
+        return 10000.0
+
+    marble_diff_score += enemy_off_score + friend_off_score
+    return marble_diff_score
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline bint is_in_outer_ring_direct(int row, int col) nogil:
-    return ((row == 9 and col == 5) or (row == 9 and col == 6) or
-            (row == 9 and col == 7) or (row == 9 and col == 8) or
-            (row == 9 and col == 9) or (row == 8 and col == 4) or
-            (row == 8 and col == 9) or (row == 7 and col == 3) or
-            (row == 7 and col == 9) or (row == 6 and col == 2) or
-            (row == 6 and col == 9) or (row == 5 and col == 1) or
-            (row == 5 and col == 9) or (row == 4 and col == 1) or
-            (row == 4 and col == 8) or (row == 3 and col == 1) or
-            (row == 3 and col == 7) or (row == 2 and col == 1) or
-            (row == 2 and col == 6) or (row == 1 and col == 1) or
-            (row == 1 and col == 2) or (row == 1 and col == 3) or
-            (row == 1 and col == 4) or (row == 1 and col == 5))
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef inline double evaluate_push_ability(int *board_lookup) nogil:
-    cdef double push_score = 0.0
-    cdef int row, col, idx
-
-    for row in range(1, 10):
-        for col in range(1, 10):
-            idx = row * MAX_BOARD_SIZE + col
-            if 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE and board_lookup[idx] == 2:
-
-                if is_in_middle_ring_direct(row, col):
-                    push_score += DEFAULT_WEIGHTS.c1
-
-                elif is_in_outer_ring_direct(row, col):
-                    push_score += DEFAULT_WEIGHTS.c2
-
-    return push_score
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef inline double evaluate_formation(int *friend_rows, int *friend_cols, int friend_count,
-                                      int *board_lookup) nogil:
-    cdef double formation_score = 0.0
-    cdef int i, dir_idx, connection_count
-    cdef int neighbor_row, neighbor_col, idx
-
-    if friend_count >= 3:
-        for i in range(friend_count):
-            connection_count = 0
-
-            for dir_idx in range(DIRECTIONS_COUNT):
-                neighbor_row = friend_rows[i] + DIRECTIONS[dir_idx][0]
-                neighbor_col = friend_cols[i] + DIRECTIONS[dir_idx][1]
-
-                idx = neighbor_row * MAX_BOARD_SIZE + neighbor_col
-                if 0 <= neighbor_row < 10 and 0 <= neighbor_col < 10 and 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE and \
-                        board_lookup[idx] == 1:
-                    connection_count += 1
-
-            if connection_count == 2:
-                formation_score += DEFAULT_WEIGHTS.d1
-            elif connection_count == 3:
-                formation_score += DEFAULT_WEIGHTS.d2
-            elif connection_count == 4:
-                formation_score += DEFAULT_WEIGHTS.d3
-            elif connection_count == 5:
-                formation_score += DEFAULT_WEIGHTS.d4
-            elif connection_count == 6:
-                formation_score += DEFAULT_WEIGHTS.d5
-
-    return formation_score * 0.8
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef inline double evaluate_connectivity(int *friend_rows, int *friend_cols, int friend_count,
-                                         int *board_lookup) nogil:
-    cdef double connectivity_score = 0.0
-    cdef int i, dir_idx, connection_count
-    cdef int neighbor_row, neighbor_col, idx
-
-    if friend_count >= 3:
-        for i in range(friend_count):
-            connection_count = 0
-
-            for dir_idx in range(DIRECTIONS_COUNT):
-                neighbor_row = friend_rows[i] + DIRECTIONS[dir_idx][0]
-                neighbor_col = friend_cols[i] + DIRECTIONS[dir_idx][1]
-
-                idx = neighbor_row * MAX_BOARD_SIZE + neighbor_col
-                if 0 <= neighbor_row < 10 and 0 <= neighbor_col < 10 and 0 <= idx < MAX_BOARD_SIZE * MAX_BOARD_SIZE and \
-                        board_lookup[idx] == 1:
-                    connection_count += 1
-
-            if connection_count == 0:
-                connectivity_score -= DEFAULT_WEIGHTS.e1
-
-            elif connection_count == 1:
-                connectivity_score -= DEFAULT_WEIGHTS.e2
-
-    return connectivity_score * 0.9
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef double evaluate_board_with_features_c(int *friend_rows, int *friend_cols, int friend_count,
-                                           int *enemy_rows, int *enemy_cols, int enemy_count,
-                                           int *board_lookup, CGroup *groups, int group_count,
-                                           EvaluationWeights *weights) nogil:
-    cdef double scores[5]
-    cdef int feature_idx
-    cdef int num_features = 5
-
-    for feature_idx in prange(num_features, nogil=True, schedule='static'):
-        if feature_idx == 0:
-            scores[0] = evaluate_marble_difference(friend_count, enemy_count)
-        elif feature_idx == 1:
-            scores[1] = evaluate_centrality(friend_rows, friend_cols, friend_count,
-                                            enemy_rows, enemy_cols, enemy_count)
-        elif feature_idx == 2:
-            scores[2] = evaluate_push_ability(board_lookup)
-        elif feature_idx == 3:
-            scores[3] = evaluate_formation(friend_rows, friend_cols, friend_count, board_lookup)
-        elif feature_idx == 4:
-            scores[4] = evaluate_connectivity(friend_rows, friend_cols, friend_count, board_lookup)
-
-    return scores[0] + scores[1] + scores[2] + scores[3] + scores[4]
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def evaluate_board_with_features(list board, str player):
+def evaluate_board(list board, str player):
+    """
+    Complete board evaluation function
+    Combines multiple evaluation factors with weights
+    """
     cdef int friend_idx = 0 if player.lower() == "black" else 1
     cdef int enemy_idx = 1 if player.lower() == "black" else 0
 
@@ -991,100 +542,64 @@ def evaluate_board_with_features(list board, str player):
     cdef int friend_count = len(friend_marbles)
     cdef int enemy_count = len(enemy_marbles)
 
-    cdef int * friend_rows = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int * friend_cols = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int * enemy_rows = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int * enemy_cols = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int * board_lookup = <int *> malloc(MAX_BOARD_SIZE * MAX_BOARD_SIZE * sizeof(int))
-    cdef CGroup * groups = <CGroup *> malloc(MAX_GROUPS * sizeof(CGroup))
-    cdef int group_count = 0
-    cdef double total_score
+    cdef double marble_diff_score, centrality_score, push_ability_score
+    cdef double hexagon_score, connectivity_score, total_score
 
-    if not friend_rows or not friend_cols or not enemy_rows or not enemy_cols or not board_lookup or not groups:
-        if friend_rows: free(friend_rows)
-        if friend_cols: free(friend_cols)
-        if enemy_rows: free(enemy_rows)
-        if enemy_cols: free(enemy_cols)
-        if board_lookup: free(board_lookup)
-        if groups: free(groups)
-        raise MemoryError("memory issue in evaluate_board_with_features")
-    try:
+    cdef int i, j
+    for i in range(BOARD_SIZE):
+        for j in range(BOARD_SIZE):
+            FRIEND_MASK_VIEW[i, j] = 0
+            ENEMY_MASK_VIEW[i, j] = 0
 
-        copy_marbles_to_c_array(friend_marbles, friend_rows, friend_cols, &friend_count)
-        copy_marbles_to_c_array(enemy_marbles, enemy_rows, enemy_cols, &enemy_count)
+    for i in range(len(friend_marbles)):
+        FRIEND_MASK_VIEW[friend_marbles[i][0], friend_marbles[i][1]] = 1
+    for i in range(len(enemy_marbles)):
+        ENEMY_MASK_VIEW[enemy_marbles[i][0], enemy_marbles[i][1]] = 1
 
-        create_board_lookup(friend_rows, friend_cols, friend_count, enemy_rows, enemy_cols, enemy_count, board_lookup)
+    cdef list friend_positions = [tuple(pos) for pos in friend_marbles]
+    cdef list enemy_positions = [tuple(pos) for pos in enemy_marbles]
 
-        find_groups_c(friend_rows, friend_cols, friend_count, board_lookup, groups, &group_count)
+    centrality_score = calculate_centrality(friend_positions, enemy_positions)
 
-        total_score = evaluate_board_with_features_c(
-            friend_rows, friend_cols, friend_count,
-            enemy_rows, enemy_cols, enemy_count,
-            board_lookup, groups, group_count,
-            &DEFAULT_WEIGHTS
-        )
+    cdef list friend_groups = find_groups_fast(friend_marbles)
+    cdef list enemy_groups = find_groups_fast(enemy_marbles)
 
-        return total_score
+    push_ability_score = evaluate_push_ability_strength(friend_groups)
+    hexagon_score = evaluate_hexagon_formation(friend_positions) * 0.75
+    connectivity_score = evaluate_connectivity(friend_positions, True) - evaluate_connectivity(enemy_positions,
+                                                                                               False) * 0.9
+    marble_diff_score = evaluate_marble_difference(friend_count, enemy_count)
 
-    finally:
+    total_score = 0.0
+    total_score += WEIGHTS.get("marble_diff", 1.0) * marble_diff_score
+    total_score += WEIGHTS.get("centrality", 1.0) * centrality_score
+    total_score += WEIGHTS.get("push_ability", 1.0) * push_ability_score
+    total_score += WEIGHTS.get("formation", 1.0) * hexagon_score
+    total_score += WEIGHTS.get("connectivity", 1.0) * connectivity_score
 
-        if friend_rows: free(friend_rows)
-        if friend_cols: free(friend_cols)
-        if enemy_rows: free(enemy_rows)
-        if enemy_cols: free(enemy_cols)
-        if board_lookup: free(board_lookup)
-        if groups: free(groups)
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def evaluate_board(list board, str player):
-    return evaluate_board_with_features(board, player)
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def move_ordering_score(list move, int depth, tuple prev_best=None):
-    
-    cdef double score = 0.0
-    cdef uint64_t move_key = compute_zobrist_hash(move)
-    cdef str move_key_str = str(move_key)
-
-    if prev_best and move == prev_best[1]:
-        return float('inf')
-
-    if depth in killer_moves and move_key_str in killer_moves[depth]:
-        score += 100.0 + float(killer_moves[depth][move_key_str])
-
-    return score
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef double _enhanced_move_ordering(tuple item, int depth, tuple prev_best):
-    
-    cdef object move_key, move
-    move_key, move = item
-    return move_ordering_score(move, depth, prev_best)
+    return total_score
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, double beta, str player,
                                       str maximizing_player,
-                                      object move_generator, double time_start, double time_limit,
-                                      tuple prev_best=None):
-    
+                                      object move_generator, double time_start, double time_limit):
+    """
+    Alpha-beta search algorithm with time limit checking
+    """
     cdef double current_time
-    cdef uint64_t board_hash
+    cdef np.uint64_t board_hash
+    cdef str tt_key
+    cdef tuple result, value
     cdef double eval_score, best_score, score
-    cdef list moves_items
+    cdef dict next_boards_dict
+    cdef list next_boards, scores
     cdef str next_player, current_color
     cdef object best_move = None
-    cdef object best_move_key = None
-    cdef bint is_maximizer
-    cdef uint64_t move_hash
+    cdef np.uint64_t move_hash
     cdef str move_hash_str
-    cdef int tt_flag
-    cdef uint64_t best_move_hash = 0
-    cdef bint tt_hit
+    cdef int i
+    cdef tuple key_tuple
 
     if depth % 2 == 0:
         current_time = time.time()
@@ -1092,75 +607,65 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
             raise TimeoutError("Search time limit exceeded")
 
     board_hash = compute_zobrist_hash(board)
+    tt_key = f"{board_hash}:{player}:{depth}"
 
-    cdef double tt_score = 0
-    cdef int tt_entry_flag = 0
-    cdef uint64_t tt_best_move_hash = 0
-
-    tt_hit = tt_probe(board_hash, depth, &tt_score, &tt_entry_flag, &tt_best_move_hash)
-
-    if tt_hit:
-        if tt_entry_flag == TT_EXACT:
-
-            return (tt_score, None, None)
-        elif tt_entry_flag == TT_LOWER and tt_score >= beta:
-
-            return (tt_score, None, None)
-        elif tt_entry_flag == TT_UPPER and tt_score <= alpha:
-
-            return (tt_score, None, None)
+    if tt_key in transposition_table:
+        value = transposition_table.pop(tt_key)
+        transposition_table[tt_key] = value
+        return value
 
     if depth <= 0:
         eval_score = evaluate_board(board, maximizing_player)
-
-        tt_store(board_hash, depth, eval_score, TT_EXACT, 0, tt_age)
-        return (eval_score, None, None)
+        result = (eval_score, None)
+        transposition_table[tt_key] = result
+        manage_cache_size(transposition_table, MAX_TABLE_SIZE)
+        return result
 
     current_color = "BLACK" if player.lower() == "black" else "WHITE"
-    moves_dict = move_generator(board, current_color)
+    next_boards_dict = move_generator(board, current_color)
 
-    if not moves_dict:
+    if not next_boards_dict:
+
         eval_score = evaluate_board(board, maximizing_player)
-        tt_store(board_hash, depth, eval_score, TT_EXACT, 0, tt_age)
-        return (eval_score, None, None)
+        result = (eval_score, None)
+        transposition_table[tt_key] = result
+        manage_cache_size(transposition_table, MAX_TABLE_SIZE)
+        return result
 
-    moves_items = list(moves_dict.items())
+    next_boards = list(next_boards_dict.values())
 
-    scores = [(item, _enhanced_move_ordering(item, depth, prev_best)) for item in moves_items]
-
+    scores = [(board, evaluate_board(board, player)) for board in next_boards]
     is_maximizer = player.lower() == maximizing_player.lower()
+
     if is_maximizer:
-
-        scores.sort(key=lambda x: (x[1], compute_zobrist_hash(x[0][1])), reverse=True)
+        scores.sort(key=lambda x: x[1], reverse=True)
     else:
+        scores.sort(key=lambda x: x[1])
 
-        scores.sort(key=lambda x: (x[1], -compute_zobrist_hash(x[0][1])))
-
-    moves_items = [item for item, _ in scores]
-
+    next_boards = [board for board, _ in scores]
     next_player = "White" if player.lower() == "black" else "Black"
+
+    board_to_key = {id(board): key for key, board in next_boards_dict.items()}
 
     if is_maximizer:
         best_score = float('-inf')
-        for move_key, move in moves_items:
+        for i, move in enumerate(next_boards):
             try:
-                score, _, _ = alpha_beta_with_time_check(
+                score, _ = alpha_beta_with_time_check(
                     move, depth - 1, alpha, beta, next_player, maximizing_player,
-                    move_generator, time_start, time_limit,
-                    (best_move_key, best_move) if best_move else None
+                    move_generator, time_start, time_limit
                 )
 
                 if score > best_score:
                     best_score = score
                     best_move = move
-                    best_move_key = move_key
 
                 alpha = max(alpha, best_score)
 
                 if beta <= alpha:
+
                     move_hash = compute_zobrist_hash(move)
                     move_hash_str = str(move_hash)
-
                     if depth not in killer_moves:
                         killer_moves[depth] = {}
                     killer_moves[depth][move_hash_str] = killer_moves[depth].get(move_hash_str, 0) + depth * depth
@@ -1168,43 +673,29 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
                     break
 
             except TimeoutError:
-                if best_move is None and moves_items:
-                    best_move_key, best_move = moves_items[0]
+                if best_move is None and next_boards:
+                    best_move = next_boards[0]
                 raise
-
-        if best_move is not None:
-            best_move_hash = compute_zobrist_hash(best_move)
-
-        if best_score <= alpha:
-            tt_flag = TT_UPPER
-        elif best_score >= beta:
-            tt_flag = TT_LOWER
-        else:
-            tt_flag = TT_EXACT
-
-        tt_store(board_hash, depth, best_score, tt_flag, best_move_hash, tt_age)
 
     else:
         best_score = float('inf')
-        for move_key, move in moves_items:
+        for i, move in enumerate(next_boards):
             try:
-                score, _, _ = alpha_beta_with_time_check(
+                score, _ = alpha_beta_with_time_check(
                     move, depth - 1, alpha, beta, next_player, maximizing_player,
-                    move_generator, time_start, time_limit,
-                    (best_move_key, best_move) if best_move else None
+                    move_generator, time_start, time_limit
                 )
 
                 if score < best_score:
                     best_score = score
                     best_move = move
-                    best_move_key = move_key
 
                 beta = min(beta, best_score)
 
                 if beta <= alpha:
+
                     move_hash = compute_zobrist_hash(move)
                     move_hash_str = str(move_hash)
-
                     if depth not in killer_moves:
                         killer_moves[depth] = {}
                     killer_moves[depth][move_hash_str] = killer_moves[depth].get(move_hash_str, 0) + depth * depth
@@ -1212,100 +703,58 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
                     break
 
             except TimeoutError:
-                if best_move is None and moves_items:
-                    best_move_key, best_move = moves_items[0]
+                if best_move is None and next_boards:
+                    best_move = next_boards[0]
                 raise
 
-        if best_move is not None:
-            best_move_hash = compute_zobrist_hash(best_move)
+    result = (best_score, best_move)
+    transposition_table[tt_key] = result
+    manage_cache_size(transposition_table, MAX_TABLE_SIZE)
+    return result
 
-        if best_score <= alpha:
-            tt_flag = TT_UPPER
-        elif best_score >= beta:
-            tt_flag = TT_LOWER
-        else:
-            tt_flag = TT_EXACT
+def get_move_string_from_key(key_tuple):
+    """
+    Convert a move key tuple to a readable string representation
+    """
+    source_tuple, dest_tuple = key_tuple
+    source_str = ""
+    dest_str = ""
 
-        tt_store(board_hash, depth, best_score, tt_flag, best_move_hash, tt_age)
+    for src in source_tuple:
+        row, col = src
+        letter = chr(ord('A') + row - 1)
+        source_str += f"{letter}{col}"
 
-    return best_score, best_move, best_move_key
+    for dst in dest_tuple:
+        row, col = dst
+        letter = chr(ord('A') + row - 1)
+        dest_str += f"{letter}{col}"
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef uint64_t compute_zobrist_hash_c(int * black_rows, int * black_cols, int black_count,
-                                     int * white_rows, int * white_cols, int white_count):
-    
-    cdef uint64_t hash_value = 0
-    cdef int i, idx
+    return f"{source_str},{dest_str}"
 
-    for i in range(black_count):
-        idx = coord_to_index_c(black_rows[i], black_cols[i])
-        if idx >= 0:
-            hash_value ^= ZOBRIST_TABLE_C[0][idx]
-
-    for i in range(white_count):
-        idx = coord_to_index_c(white_rows[i], white_cols[i])
-        if idx >= 0:
-            hash_value ^= ZOBRIST_TABLE_C[1][idx]
-
-    return hash_value
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cpdef uint64_t compute_zobrist_hash(list board):
-    
-    cdef int * black_rows = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int * black_cols = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int * white_rows = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int * white_cols = <int *> malloc(MAX_MARBLES * sizeof(int))
-    cdef int black_count = 0
-    cdef int white_count = 0
-    cdef uint64_t hash_value = 0
-
-    if not black_rows or not black_cols or not white_rows or not white_cols:
-        if black_rows: free(black_rows)
-        if black_cols: free(black_cols)
-        if white_rows: free(white_rows)
-        if white_cols: free(white_cols)
-        raise MemoryError("memory issue 1")
-    try:
-
-        copy_marbles_to_c_array(board[0], black_rows, black_cols, &black_count)
-        copy_marbles_to_c_array(board[1], white_rows, white_cols, &white_count)
-
-        hash_value = compute_zobrist_hash_c(black_rows, black_cols, black_count, white_rows, white_cols, white_count)
-
-        return hash_value
-    finally:
-
-        if black_rows: free(black_rows)
-        if black_cols: free(black_cols)
-        if white_rows: free(white_rows)
-        if white_cols: free(white_cols)
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def board_to_key(list board):
-    
-    return compute_zobrist_hash(board)
-
-def find_best_move(list board, str player, int depth=5, double time_limit=10.0, object from_move_generator=None):
-    
-    cdef int min_depth = 3
+def find_best_move(list board, str player, int depth=4, double time_limit=5.0, object from_move_generator=None):
+    """
+    Find the best move using iterative deepening alpha-beta search
+    Returns: (best board state, move string, empty features dict, total search time)
+    """
+    cdef int min_depth = 2
     cdef double start_time, current_time, elapsed, max_search_time, depth_start_time, remaining_time
-    cdef str move_str
-    cdef double score, last_best_score = 0.0
-    cdef int current_depth, max_reached_depth = 0
-    cdef tuple prev_best, result
+    cdef double best_score, score
+    cdef int current_depth
+    cdef tuple result
     cdef list last_best_move = None
-    cdef object last_best_move_key = None
+    cdef double last_best_score = 0.0
+    cdef str color
+    cdef dict next_boards_dict
+    cdef tuple best_move_key = None
+    cdef str move_str = ""
 
     if depth < min_depth:
         depth = min_depth
 
     if from_move_generator is None:
         try:
-            from next_move_generator_cy import generate_all_next_moves
+            from next_move_generator import generate_all_next_moves
             from_move_generator = generate_all_next_moves
         except ImportError:
             raise ImportError("Move generator not provided or not found.")
@@ -1313,7 +762,7 @@ def find_best_move(list board, str player, int depth=5, double time_limit=10.0, 
     start_time = time.time()
     max_search_time = time_limit * 0.95
 
-    clear_tt()
+    transposition_table.clear()
     killer_moves.clear()
     history_table.clear()
 
@@ -1325,28 +774,33 @@ def find_best_move(list board, str player, int depth=5, double time_limit=10.0, 
             print(f"Time limit approaching, stopping at depth {current_depth - 1}")
             break
 
-        print(f"\nSearching depth {current_depth}...\n")
+        print(f"Searching depth {current_depth}...")
 
         try:
             depth_start_time = time.time()
             remaining_time = max_search_time - elapsed
 
-            prev_best = (last_best_move_key, last_best_move) if last_best_move else None
-
-            score, move, move_key = alpha_beta_with_time_check(
+            score, move = alpha_beta_with_time_check(
                 board, current_depth, float('-inf'), float('inf'),
-                player, player, from_move_generator, depth_start_time, remaining_time,
-                prev_best
+                player, player, from_move_generator, depth_start_time, remaining_time
             )
 
             if move is not None:
                 last_best_move = move
-                last_best_move_key = move_key
                 last_best_score = score
-                max_reached_depth = current_depth
 
-                move_str = get_move_string_from_key(move_key)
-                print(f"Depth {current_depth} best move: {move_str} (score: {score:.2f})")
+                color = "BLACK" if player.lower() == "black" else "WHITE"
+                next_boards_dict = from_move_generator(board, color)
+                for key, value in next_boards_dict.items():
+                    if value == move:
+                        best_move_key = key
+                        move_str = get_move_string_from_key(key)
+                        break
+
+                print(f"Depth {current_depth} best move found (score: {score:.2f}, move: {move_str})")
+
+                current_time = time.time()
+                elapsed = current_time - start_time
 
         except TimeoutError:
             print(f"Time limit reached during depth {current_depth} search")
@@ -1356,44 +810,33 @@ def find_best_move(list board, str player, int depth=5, double time_limit=10.0, 
         try:
             current_time = time.time()
             remaining_time = max(time_limit * 0.1, time_limit - (current_time - start_time))
-            print(f"No move found. Emergency search with {remaining_time:.4f}s")
+            print(f"No move found. emergency search with {remaining_time:.4f}s")
 
-            score, last_best_move, last_best_move_key = alpha_beta_with_time_check(
+            score, last_best_move = alpha_beta_with_time_check(
                 board, 1, float('-inf'), float('inf'),
                 player, player, from_move_generator, current_time, remaining_time
             )
 
-            if last_best_move:
-                last_best_score = score
-                max_reached_depth = 1
+            if last_best_move is not None:
+                color = "BLACK" if player.lower() == "black" else "WHITE"
+                next_boards_dict = from_move_generator(board, color)
+                for key, value in next_boards_dict.items():
+                    if value == last_best_move:
+                        best_move_key = key
+                        move_str = get_move_string_from_key(key)
+                        break
 
         except TimeoutError:
             print("Emergency search timed out")
             color = "BLACK" if player.lower() == "black" else "WHITE"
-            moves_dict = from_move_generator(board, color)
-            if moves_dict:
+            next_boards_dict = from_move_generator(board, color)
+            if next_boards_dict and len(next_boards_dict) > 0:
+                best_move_key = next(iter(next_boards_dict.keys()))
+                last_best_move = next_boards_dict[best_move_key]
+                move_str = get_move_string_from_key(best_move_key)
 
-                sorted_moves = sorted(moves_dict.items(), key=lambda x: compute_zobrist_hash(x[1]))
-                last_best_move_key, last_best_move = sorted_moves[0]
-
-    move_str = get_move_string_from_key(last_best_move_key) if last_best_move_key else "No move found"
     end_time = time.time()
-    total_time = end_time - start_time
+    cdef double total_time = end_time - start_time
+    print(f"Search completed in {total_time:.4f}s - {len(transposition_table)} positions searched")
 
-    print(f"Search completed in {total_time:.4f}s - Max depth: {max_reached_depth}, Final score: {last_best_score:.2f}")
-
-    return last_best_move, move_str, {}, total_time
-
-def get_move_string_from_key(move_key):
-    
-    if move_key is None:
-        return "No move found"
-
-    source_coords, dest_coords = move_key
-
-    letter_map = {i: chr(ord('A') + i - 1) for i in range(1, 10)}
-
-    from_str = ''.join(f"{letter_map[r]}{c}" for r, c in sorted(source_coords))
-    to_str = ''.join(f"{letter_map[r]}{c}" for r, c in sorted(dest_coords))
-
-    return f"{from_str},{to_str}"
+    return last_best_move, move_str, total_time

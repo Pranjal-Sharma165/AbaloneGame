@@ -27,7 +27,7 @@ for depth in depths:
     start_time = time.time()
 
     try:
-        best_move, move_notation, features, search_time = find_best_move(
+        best_move, move_notation, search_time = find_best_move(
             board,
             turn,
             depth=depth,
