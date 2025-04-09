@@ -1107,6 +1107,7 @@ def execute_ai_move():
         root.after(0, lambda: finish_ai_move(new_board_list, move_str))
 
     threading.Thread(target=run_ai).start()
+    # run_ai()
 
 def finish_ai_move(new_board_list, move_str):
     global current_board

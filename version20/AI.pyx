@@ -36,12 +36,20 @@ DIRECTIONS_C= [
 DIRECTIONS = np.array(DIRECTIONS_C, dtype=DTYPE)
 cdef INT64_t[:, :] DIRECTIONS_VIEW = DIRECTIONS
 
+# WEIGHTS = {
+#     "marble_diff": 1.0,
+#     "centrality": 0.18,
+#     "push_ability": 0.35,
+#     "formation": 0.027,
+#     "connectivity": 1.35
+# }
+
 WEIGHTS = {
-    "marble_diff": 1.0,
-    "centrality": 0.18,
-    "push_ability": 0.35,
-    "formation": 0.027,
-    "connectivity": 1.35
+    "marble_diff": 1.1041443693267945,
+    "centrality": 0.306827839854944,
+    "push_ability": 0.6128433464653753,
+    "formation": 0.629919418622128,
+    "connectivity": 1.0654926558123083
 }
 
 VALID_COORDS = np.array([

@@ -434,7 +434,7 @@ def main():
     learning_rate_decay = 0.95
     games_per_match = 1
     time_limit = 7.0
-    board_type = "belgian"
+    board_type = "standard"
     max_depth = 3
     run_indefinitely = True
     verbose = True
