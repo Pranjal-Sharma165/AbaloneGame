@@ -40,11 +40,11 @@ DIRECTIONS = np.array(DIRECTIONS_C, dtype=DTYPE)
 cdef INT64_t[:, :] DIRECTIONS_VIEW = DIRECTIONS
 
 WEIGHTS = {
-    "marble_diff": 1.0,
-    "centrality": 0.203,
-    "push_ability": 0.345,
-    "formation": 0.0270,
-    "connectivity": 1.361
+    "marble_diff": 5.00,
+    "centrality": 0.21410,
+    "push_ability": 0.35436,
+    "formation": 0.02552,
+    "connectivity": 1.32577
 }
 
 
@@ -790,7 +790,7 @@ def find_best_move(list board, str player, int depth=4, double time_limit=5.0, o
             raise ImportError("Move generator not provided or not found.")
 
     start_time = time.time()
-    max_search_time = time_limit * 0.95
+    max_search_time = time_limit * 0.92
 
     transposition_table.clear()
     killer_moves.clear()
