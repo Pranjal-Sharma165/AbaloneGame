@@ -395,6 +395,9 @@ def stop_game():
     Stops the game, resets the state, and hides game elements to return to the start screen.
     """
     global is_running
+
+    messagebox.showinfo("timer", f"Total aggregate time: {total_aggregate_time} seconds")
+
     is_running = False
     reset_game_state()
     close_text_files()
@@ -549,7 +552,7 @@ def update_move():
     # Check if the next move will exceed the move limit
     if total_moves_played >= 2 * max_moves - 1:
         messagebox.showinfo("Game Over", "Both players have reached their move limit! Game Over.\n"
-                                         f"Total aggregate time: {total_aggregate_time}")
+                                         f"Total aggregate time: {total_aggregate_time} seconds")
         stop_game()
         return
 
@@ -1179,7 +1182,8 @@ def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
         if white_score >= 6:
             messagebox.showinfo("Game Over",
                                 f"Player 1 wins. Player 2 lost 6 or more marbles.\n\n"
-                                f"Last move: {move_str}")
+                                f"Last move: {move_str}"
+                                f"Total aggregate time: {total_aggregate_time} seconds")
             stop_game()
             return True
     else:
@@ -1188,7 +1192,8 @@ def update_score_and_check_game_end(marbles_pushed_off, move_str=""):
         if black_score >= 6:
             messagebox.showinfo("Game Over",
                                 f"Player 2 wins. Player 1 lost 6 or more marbles.\n\n"
-                                f"Last move: {move_str}")
+                                f"Last move: {move_str}"
+                                f"Total aggregate time: {total_aggregate_time} seconds")
             stop_game()
             return True
 

@@ -790,7 +790,7 @@ def find_best_move(list board, str player, int depth=4, double time_limit=5.0, o
             raise ImportError("Move generator not provided or not found.")
 
     start_time = time.time()
-    max_search_time = time_limit * 0.92
+    max_search_time = time_limit * 0.89
 
     transposition_table.clear()
     killer_moves.clear()
