@@ -4,7 +4,9 @@
 # cython: initializedcheck=False
 # cython: wraparound=False
 # cython: nonecheck=False
-# cython: profile=False
+# cython: fastcall=True
+# cython: binding=False
+
 
 import time
 import numpy as np
@@ -19,6 +21,7 @@ from collections import OrderedDict
 ctypedef np.int64_t INT64_t
 ctypedef np.float64_t FLOAT64_t
 ctypedef np.uint8_t UINT8_t
+ctypedef unsigned long long uint64_t
 
 DTYPE = np.int64
 FLOAT_DTYPE = np.float64
@@ -36,21 +39,14 @@ DIRECTIONS_C= [
 DIRECTIONS = np.array(DIRECTIONS_C, dtype=DTYPE)
 cdef INT64_t[:, :] DIRECTIONS_VIEW = DIRECTIONS
 
-# WEIGHTS = {
-#     "marble_diff": 1.0,
-#     "centrality": 0.18,
-#     "push_ability": 0.35,
-#     "formation": 0.027,
-#     "connectivity": 1.35
-# }
-
 WEIGHTS = {
-    "marble_diff": 1.1041443693267945,
-    "centrality": 0.306827839854944,
-    "push_ability": 0.6128433464653753,
-    "formation": 0.629919418622128,
-    "connectivity": 1.0654926558123083
+    "marble_diff": 1.0,
+    "centrality": 0.203,
+    "push_ability": 0.345,
+    "formation": 0.0270,
+    "connectivity": 1.361
 }
+
 
 VALID_COORDS = np.array([
     [9, 5], [9, 6], [9, 7], [9, 8], [9, 9],
@@ -71,9 +67,9 @@ for coord in VALID_COORDS:
     VALID_COORDS_LOOKUP[coord[0], coord[1]] = 1
 cdef UINT8_t[:, :] VALID_COORDS_LOOKUP_VIEW = VALID_COORDS_LOOKUP
 
-VALID_COORDS_SET = {tuple(coord) for coord in VALID_COORDS}
+cdef set VALID_COORDS_SET = {tuple(coord) for coord in VALID_COORDS}
 
-COORD_TO_INDEX_MAP = {}
+cdef dict COORD_TO_INDEX_MAP = {}
 for i in range(VALID_COORDS.shape[0]):
     COORD_TO_INDEX_MAP[tuple(VALID_COORDS[i])] = i
 
@@ -107,9 +103,9 @@ cdef double CENTER_SCORE = 7.0
 cdef double RING1_SCORE = 4.5
 cdef double RING2_SCORE = 2.8
 cdef double RING3_SCORE = 1.3
-cdef double RING4_SCORE = -1.5
+cdef double RING4_SCORE = -1.7
 
-CENTRALITY_MAP = {}
+cdef dict CENTRALITY_MAP = {}
 for coord in CENTER_COORDS:
     CENTRALITY_MAP[tuple(coord)] = CENTER_SCORE
 for coord in RING1_COORDS:
@@ -131,7 +127,7 @@ cdef set outer_ring = {(int(coord[0]), int(coord[1])) for coord in RING4_COORDS}
 cdef set middle_ring = {(int(coord[0]), int(coord[1])) for coord in RING3_COORDS}
 cdef set inner_ring = {(int(coord[0]), int(coord[1])) for coord in RING2_COORDS}
 
-NEIGHBOR_CACHE = {}
+cdef dict NEIGHBOR_CACHE = {}
 for i in range(VALID_COORDS.shape[0]):
     coord = tuple(VALID_COORDS[i])
     neighbors = []
@@ -145,21 +141,24 @@ ZOBRIST_TABLE = np.random.randint(
     0, 2 ** 64 - 1, size=(2, VALID_COORDS.shape[0]), dtype=np.uint64
 )
 
-MAX_TABLE_SIZE = 200000
-transposition_table = OrderedDict()
-history_table = {}
-killer_moves = {}
+cdef int MAX_TABLE_SIZE = 400000
+cdef object transposition_table = OrderedDict()
+cdef dict history_table = {}
+cdef dict killer_moves = {}
 
-MAX_CACHE_SIZE = 5000
-group_cache = OrderedDict()
+cdef int MAX_CACHE_SIZE = 50000
+cdef object group_cache = OrderedDict()
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline void manage_cache_size(object cache, int max_size):
     """Manage cache size by removing oldest entries if needed"""
+    cdef int remove_count
+    cdef int i
+
     if len(cache) > max_size:
         remove_count = max_size // 5
-        for _ in range(remove_count):
+        for i in range(remove_count):
             if cache:
                 cache.popitem(last=False)
 
@@ -191,6 +190,7 @@ cdef inline bint is_in_array(tuple coord, list arr):
     """Check if coordinate is in an array, optimized for different array sizes"""
     cdef int i
     cdef tuple item_tuple
+    cdef set arr_set
 
     if len(arr) > 10:
         arr_set = {tuple(pos) for pos in arr}
@@ -209,6 +209,7 @@ cpdef np.uint64_t compute_zobrist_hash(list board):
     cdef np.uint64_t hash_value = 0
     cdef int idx
     cdef tuple marble_tuple
+    cdef list marble_list
 
     for marble in board[0]:
         marble_tuple = tuple(marble)
@@ -226,7 +227,7 @@ cpdef np.uint64_t compute_zobrist_hash(list board):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def find_groups_fast(marbles):
+def find_groups_fast(list marbles):
     """
     Find all possible groups of marbles (singles, pairs, triplets in line)
     Optimized with caching for frequent marble configurations
@@ -236,17 +237,18 @@ def find_groups_fast(marbles):
 
     cdef list marbles_tuple = [tuple(m) for m in marbles]
     cdef tuple cache_key = tuple(sorted(marbles_tuple))
-
-    if cache_key in group_cache:
-        value = group_cache.pop(cache_key)
-        group_cache[cache_key] = value
-        return value
-
+    cdef object value
     cdef list result = []
     cdef int i, j, max_process, max_groups
     cdef tuple marble1, neighbor, ext
     cdef list group
     cdef tuple diff
+    cdef set marbles_set
+
+    if cache_key in group_cache:
+        value = group_cache.pop(cache_key)
+        group_cache[cache_key] = value
+        return value
 
     for i in range(len(marbles)):
         result.append([marbles[i]])
@@ -256,9 +258,9 @@ def find_groups_fast(marbles):
         manage_cache_size(group_cache, MAX_CACHE_SIZE)
         return result
 
-    cdef set marbles_set = set(marbles_tuple)
+    marbles_set = set(marbles_tuple)
 
-    max_process = min(len(marbles), 50)
+    max_process = min(len(marbles), 63)
 
     for i in range(max_process):
         marble1 = marbles_tuple[i]
@@ -266,7 +268,7 @@ def find_groups_fast(marbles):
             if neighbor in marbles_set:
                 result.append([list(marble1), list(neighbor)])
 
-    max_groups = min(len(result), 50)
+    max_groups = min(len(result), 63)
 
     for i in range(min(max_groups, len(result))):
         group = result[i]
@@ -288,8 +290,10 @@ cdef double evaluate_connectivity(list positions, bint friend_side):
     Uses pre-filled mask arrays for fast lookups
     """
     cdef double conn_score = 0.0
-    cdef int connection_count, row, col, nr, nc
+    cdef int connection_count = 0
+    cdef int row, col, nr, nc
     cdef int dr, dc, i
+    cdef tuple position
 
     if len(positions) < 3:
         return 0.0
@@ -306,7 +310,6 @@ cdef double evaluate_connectivity(list positions, bint friend_side):
             nc = col + dc
 
             if 0 <= nr < 10 and 0 <= nc < 10:
-
                 if friend_side:
                     if FRIEND_MASK_VIEW[nr, nc] == 1:
                         connection_count += 1
@@ -317,7 +320,7 @@ cdef double evaluate_connectivity(list positions, bint friend_side):
         if connection_count == 0:
             conn_score -= 7.0
         elif connection_count == 1:
-            conn_score -= 2.3
+            conn_score -= 2.5
 
     return conn_score
 
@@ -328,21 +331,29 @@ cdef double evaluate_hexagon_formation(list positions):
     Evaluate formation of marbles - rewards hexagon and other strong formations
     """
     cdef double hexagon_score = 0.0
-    cdef int neighbor_count, total_neighbors = 0, positions_with_neighbors = 0
+    cdef int neighbor_count = 0
+    cdef int total_neighbors = 0
+    cdef int positions_with_neighbors = 0
     cdef int row, col, nr, nc, dr, dc, i, dir1_idx, dir2_idx
-    cdef double avg_connections, rectangle_score = 0.0
+    cdef double avg_connections
+    cdef double rectangle_score = 0.0
     cdef int dr2
     cdef int dc2
     cdef int r3, c3
     cdef int r4, c4
+    cdef tuple position
 
-    for (row, col) in [(pos[0], pos[1]) for pos in positions]:
+    for position in positions:
+        row = position[0]
+        col = position[1]
         neighbor_count = 0
+
         for i in range(DIRECTIONS_VIEW.shape[0]):
-            dr = <int> DIRECTIONS_VIEW[i, 0];
+            dr = <int> DIRECTIONS_VIEW[i, 0]
             dc = <int> DIRECTIONS_VIEW[i, 1]
-            nr = row + dr;
+            nr = row + dr
             nc = col + dc
+
             if 0 <= nr < 10 and 0 <= nc < 10 and FRIEND_MASK_VIEW[nr, nc] == 1:
                 neighbor_count += 1
 
@@ -362,15 +373,17 @@ cdef double evaluate_hexagon_formation(list positions):
     if avg_connections > 4.0:
         hexagon_score -= (avg_connections - 4.0) * 2.0
 
-    for (row, col) in [(p[0], p[1]) for p in positions]:
+    for position in positions:
+        row = position[0]
+        col = position[1]
+
         for dir1_idx in range(DIRECTIONS_VIEW.shape[0]):
-            dr = <int> DIRECTIONS_VIEW[dir1_idx, 0];
+            dr = <int> DIRECTIONS_VIEW[dir1_idx, 0]
             dc = <int> DIRECTIONS_VIEW[dir1_idx, 1]
-            nr = row + dr;
+            nr = row + dr
             nc = col + dc
 
             if 0 <= nr < 10 and 0 <= nc < 10 and FRIEND_MASK_VIEW[nr, nc] == 1:
-
                 dir2_idx = (dir1_idx + 2) % 6
                 dr2 = <int> DIRECTIONS_VIEW[dir2_idx, 0]
                 dc2 = <int> DIRECTIONS_VIEW[dir2_idx, 1]
@@ -394,14 +407,17 @@ cdef double evaluate_push_ability_strength(list groups):
     Evaluate the push potential of marble groups
     """
     cdef double strength = 0.0
-    cdef int push_count
+    cdef int push_count = 0
     cdef int r1, c1, r2, c2, r3, c3, push_r, push_c, final_r, final_c, next_r, next_c
     cdef list group, pos1, pos2, pos3
+    cdef list three_groups = []
+    cdef list two_groups = []
+    cdef int m
 
     if len(groups) <= 1:
         return 0.0
 
-    cdef list three_groups = []
+    # 3개 그룹 찾기
     for group in groups:
         if len(group) == 3:
             pos1, pos2, pos3 = group
@@ -414,6 +430,7 @@ cdef double evaluate_push_ability_strength(list groups):
                 if len(three_groups) >= 15:
                     break
 
+    # 3개 그룹 평가
     for group in three_groups:
         pos1, pos2, pos3 = group
         r1, c1 = pos1[0], pos1[1]
@@ -437,7 +454,6 @@ cdef double evaluate_push_ability_strength(list groups):
             if not is_valid_coord((final_r, final_c)):
                 strength += 30.0 * push_count
             elif FRIEND_MASK_VIEW[final_r, final_c] == 0 and ENEMY_MASK_VIEW[final_r, final_c] == 0:
-
                 for m in range(push_count):
                     next_r = push_r + (r2 - r1) * m
                     next_c = push_c + (c2 - c1) * m
@@ -448,13 +464,14 @@ cdef double evaluate_push_ability_strength(list groups):
                     elif (next_r, next_c) in inner_ring:
                         strength += 3.0
 
-    cdef list two_groups = []
+    # 2개 그룹 찾기
     for group in groups:
         if len(group) == 2:
             two_groups.append(group)
             if len(two_groups) >= 20:
                 break
 
+    # 2개 그룹 평가
     for group in two_groups:
         pos1, pos2 = group
         r1, c1 = pos1[0], pos1[1]
@@ -469,7 +486,6 @@ cdef double evaluate_push_ability_strength(list groups):
             if not is_valid_coord((final_r, final_c)):
                 strength += 20.0
             elif FRIEND_MASK_VIEW[final_r, final_c] == 0 and ENEMY_MASK_VIEW[final_r, final_c] == 0:
-
                 if (push_r, push_c) in outer_ring:
                     strength += 10.0
                 elif (push_r, push_c) in middle_ring:
@@ -491,6 +507,9 @@ cdef double calculate_centrality(list friend_positions, list enemy_positions, se
     cdef tuple pos
     cdef double score
     cdef double scale_factor = 0.075
+    cdef int friend_marbles_left, enemy_marbles_left
+    cdef double friend_weight = 1.0
+    cdef double enemy_weight = 1.0
 
     for pos in friend_positions:
         score = CENTRALITY_MAP.get(pos, 1.0) * scale_factor
@@ -500,10 +519,8 @@ cdef double calculate_centrality(list friend_positions, list enemy_positions, se
         score = CENTRALITY_MAP.get(pos, 1.0) * scale_factor
         enemy_centrality += score
 
-    cdef int friend_marbles_left = len(friend_positions)
-    cdef int enemy_marbles_left = len(enemy_positions)
-    cdef double friend_weight = 1.0
-    cdef double enemy_weight = 1.0
+    friend_marbles_left = len(friend_positions)
+    enemy_marbles_left = len(enemy_positions)
 
     return friend_centrality - enemy_centrality
 
@@ -519,11 +536,10 @@ cdef double evaluate_marble_difference(int friend_count, int enemy_count):
     cdef double enemy_off_score, friend_off_score
 
     enemy_off = 14 - enemy_count
-    enemy_off_score = 600.0 * enemy_off 
+    enemy_off_score = 600.0 * enemy_off
 
     friend_off = 14 - friend_count
     friend_off_score = -650.0 * friend_off
-
 
     if friend_count <= 8:
         return -10000.0
@@ -608,6 +624,8 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
     cdef str move_hash_str
     cdef int i
     cdef tuple key_tuple
+    cdef list item_scores
+    cdef bint is_maximizer
 
     if depth % 2 == 0:
         current_time = time.time()
@@ -633,7 +651,6 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
     next_boards_dict = move_generator(board, current_color)
 
     if not next_boards_dict:
-
         eval_score = evaluate_board(board, maximizing_player)
         result = (eval_score, None)
         transposition_table[tt_key] = result
@@ -642,18 +659,18 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
 
     next_boards = list(next_boards_dict.values())
 
-    scores = [(board, evaluate_board(board, player)) for board in next_boards]
+    item_scores = [(board, evaluate_board(board, player)) for board in next_boards]
     is_maximizer = player.lower() == maximizing_player.lower()
 
     if is_maximizer:
-        scores.sort(key=lambda x: x[1], reverse=True)
+        item_scores.sort(key=lambda x: x[1], reverse=True)
     else:
-        scores.sort(key=lambda x: x[1])
+        item_scores.sort(key=lambda x: x[1])
 
-    next_boards = [board for board, _ in scores]
+    next_boards = [board for board, _ in item_scores]
     next_player = "White" if player.lower() == "black" else "Black"
 
-    board_to_key = {id(board): key for key, board in next_boards_dict.items()}
+    cdef dict board_to_key = {id(board): key for key, board in next_boards_dict.items()}
 
     if is_maximizer:
         best_score = float('-inf')
@@ -671,7 +688,6 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
                 alpha = max(alpha, best_score)
 
                 if beta <= alpha:
-
                     move_hash = compute_zobrist_hash(move)
                     move_hash_str = str(move_hash)
                     if depth not in killer_moves:
@@ -701,7 +717,7 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
                 beta = min(beta, best_score)
 
                 if beta <= alpha:
-
+                    # 알파 컷오프 - 킬러 무브 업데이트
                     move_hash = compute_zobrist_hash(move)
                     move_hash_str = str(move_hash)
                     if depth not in killer_moves:
@@ -720,13 +736,18 @@ cdef tuple alpha_beta_with_time_check(list board, int depth, double alpha, doubl
     manage_cache_size(transposition_table, MAX_TABLE_SIZE)
     return result
 
-def get_move_string_from_key(key_tuple):
+def get_move_string_from_key(tuple key_tuple):
     """
     Convert a move key tuple to a readable string representation
     """
+    cdef tuple source_tuple, dest_tuple
+    cdef str source_str = "", dest_str = ""
+    cdef int row, col
+    cdef str letter
+    cdef dict letter_map = {i: chr(ord('A') + i - 1) for i in range(1, 10)}
+    cdef tuple src, dst
+
     source_tuple, dest_tuple = key_tuple
-    source_str = ""
-    dest_str = ""
 
     for src in source_tuple:
         row, col = src
@@ -756,6 +777,7 @@ def find_best_move(list board, str player, int depth=4, double time_limit=5.0, o
     cdef dict next_boards_dict
     cdef tuple best_move_key = None
     cdef str move_str = ""
+    cdef double total_time
 
     if depth < min_depth:
         depth = min_depth
@@ -844,7 +866,36 @@ def find_best_move(list board, str player, int depth=4, double time_limit=5.0, o
                 move_str = get_move_string_from_key(best_move_key)
 
     end_time = time.time()
-    cdef double total_time = end_time - start_time
+    total_time = end_time - start_time
     print(f"Search completed in {total_time:.4f}s - {len(transposition_table)} positions searched")
 
     return last_best_move, move_str, total_time
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def get_move_string_from_key(tuple key_tuple):
+    """
+    Convert a move key tuple to a readable string representation
+    """
+    cdef tuple source_tuple, dest_tuple
+    cdef str source_str = "", dest_str = ""
+    cdef int row, col, i
+    cdef str letter
+    cdef dict letter_map = {i: chr(ord('A') + i - 1) for i in range(1, 10)}
+
+    if key_tuple is None:
+        return "No move found"
+
+    source_tuple, dest_tuple = key_tuple
+
+    for i in range(len(source_tuple)):
+        row, col = source_tuple[i]
+        letter = letter_map[row]
+        source_str += f"{letter}{col}"
+
+    for i in range(len(dest_tuple)):
+        row, col = dest_tuple[i]
+        letter = letter_map[row]
+        dest_str += f"{letter}{col}"
+
+    return f"{source_str},{dest_str}"
